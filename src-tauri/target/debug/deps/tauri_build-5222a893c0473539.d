@@ -1,0 +1,10 @@
+C:\Users\HADES\Desktop\seismologicalgraph\src-tauri\target\debug\deps\tauri_build-5222a893c0473539.d: C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-build-1.5.6\src\lib.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-build-1.5.6\src\allowlist.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-build-1.5.6\src\static_vcruntime.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-build-1.5.6\src\window-app-manifest.xml
+
+C:\Users\HADES\Desktop\seismologicalgraph\src-tauri\target\debug\deps\libtauri_build-5222a893c0473539.rlib: C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-build-1.5.6\src\lib.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-build-1.5.6\src\allowlist.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-build-1.5.6\src\static_vcruntime.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-build-1.5.6\src\window-app-manifest.xml
+
+C:\Users\HADES\Desktop\seismologicalgraph\src-tauri\target\debug\deps\libtauri_build-5222a893c0473539.rmeta: C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-build-1.5.6\src\lib.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-build-1.5.6\src\allowlist.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-build-1.5.6\src\static_vcruntime.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-build-1.5.6\src\window-app-manifest.xml
+
+C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-build-1.5.6\src\lib.rs:
+C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-build-1.5.6\src\allowlist.rs:
+C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-build-1.5.6\src\static_vcruntime.rs:
+C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-build-1.5.6\src\window-app-manifest.xml:

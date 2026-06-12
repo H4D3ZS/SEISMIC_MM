@@ -1,0 +1,12 @@
+C:\Users\HADES\Desktop\seismologicalgraph\src-tauri\target\debug\deps\tar-99b753eb4bb4ae62.d: C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tar-0.4.46\src\lib.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tar-0.4.46\src\archive.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tar-0.4.46\src\builder.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tar-0.4.46\src\entry.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tar-0.4.46\src\entry_type.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tar-0.4.46\src\error.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tar-0.4.46\src\header.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tar-0.4.46\src\pax.rs
+
+C:\Users\HADES\Desktop\seismologicalgraph\src-tauri\target\debug\deps\libtar-99b753eb4bb4ae62.rmeta: C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tar-0.4.46\src\lib.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tar-0.4.46\src\archive.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tar-0.4.46\src\builder.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tar-0.4.46\src\entry.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tar-0.4.46\src\entry_type.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tar-0.4.46\src\error.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tar-0.4.46\src\header.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tar-0.4.46\src\pax.rs
+
+C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tar-0.4.46\src\lib.rs:
+C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tar-0.4.46\src\archive.rs:
+C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tar-0.4.46\src\builder.rs:
+C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tar-0.4.46\src\entry.rs:
+C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tar-0.4.46\src\entry_type.rs:
+C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tar-0.4.46\src\error.rs:
+C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tar-0.4.46\src\header.rs:
+C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tar-0.4.46\src\pax.rs:

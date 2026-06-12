@@ -1,0 +1,12 @@
+C:\Users\HADES\Desktop\seismologicalgraph\src-tauri\target\debug\deps\ignore-7f8a3632435ef6d2.d: C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ignore-0.4.26\src\lib.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ignore-0.4.26\src\default_types.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ignore-0.4.26\src\dir.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ignore-0.4.26\src\gitignore.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ignore-0.4.26\src\overrides.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ignore-0.4.26\src\pathutil.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ignore-0.4.26\src\types.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ignore-0.4.26\src\walk.rs
+
+C:\Users\HADES\Desktop\seismologicalgraph\src-tauri\target\debug\deps\libignore-7f8a3632435ef6d2.rmeta: C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ignore-0.4.26\src\lib.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ignore-0.4.26\src\default_types.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ignore-0.4.26\src\dir.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ignore-0.4.26\src\gitignore.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ignore-0.4.26\src\overrides.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ignore-0.4.26\src\pathutil.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ignore-0.4.26\src\types.rs C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ignore-0.4.26\src\walk.rs
+
+C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ignore-0.4.26\src\lib.rs:
+C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ignore-0.4.26\src\default_types.rs:
+C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ignore-0.4.26\src\dir.rs:
+C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ignore-0.4.26\src\gitignore.rs:
+C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ignore-0.4.26\src\overrides.rs:
+C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ignore-0.4.26\src\pathutil.rs:
+C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ignore-0.4.26\src\types.rs:
+C:\Users\HADES\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ignore-0.4.26\src\walk.rs:

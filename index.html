@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CISV — SEISMIC Movement Monitoring | Philippine Geodynamic Command</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="stylesheet" href="/src/styles/main.css" />
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       PRIMARY WEBGL VIEWPORT
+       MapLibre sits at z-index:1 inside this container.
+       Three.js canvas sits at z-index:2 with alpha:true so the map
+       shows through wherever Three.js renders nothing.
+  ══════════════════════════════════════════════════════════════ -->
+  <div id="canvas-container" role="img"
+       aria-label="3D interactive seismic map of the Philippine Archipelago"></div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       TOP HUD BAR
+  ══════════════════════════════════════════════════════════════ -->
+  <header id="hud-topbar" role="banner" aria-label="Mission control header">
+    <div class="hud-logo">
+      <span class="logo-accent" aria-hidden="true">◈</span>
+      <span class="logo-primary">CISV</span>
+      <span class="logo-sub">SEISMIC Movement Monitoring</span>
+    </div>
+
+    <div class="hud-status-cluster" role="status" aria-live="polite">
+      <div class="status-block">
+        <span class="status-label">RENDER</span>
+        <span class="status-value" id="fps-counter">-- FPS</span>
+      </div>
+      <div class="status-block">
+        <span class="status-label">CATALOG</span>
+        <span class="status-value" id="event-count">-- EVENTS</span>
+      </div>
+      <div class="status-block">
+        <span class="status-label">FEED</span>
+        <span class="status-value feed-pending" id="feed-status-value">LOADING…</span>
+      </div>
+      <div class="status-block">
+        <span class="status-label">SOURCE</span>
+        <span class="source-badge source-synthetic" id="data-source-badge">—</span>
+      </div>
+      <div class="status-block">
+        <span class="status-label">LAST FETCH</span>
+        <span class="status-value" id="last-fetch-time">—</span>
+      </div>
+      <div class="status-block">
+        <span class="status-label">SECTOR</span>
+        <span class="status-value">PHILIPPINE ARCHIPELAGO</span>
+      </div>
+    </div>
+
+    <div class="hud-clock" id="utc-clock" aria-label="Current UTC time" aria-live="polite"></div>
+  </header>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       LEFT PANEL — LAYER & FILTER CONTROLS
+  ══════════════════════════════════════════════════════════════ -->
+  <aside id="panel-left" role="complementary" aria-label="Layer and filter controls">
+
+    <section class="panel-section" aria-labelledby="layers-heading">
+      <h2 class="panel-heading" id="layers-heading">LAYER CONTROL</h2>
+      <div class="layer-toggle-group">
+
+        <label class="layer-toggle" for="toggle-seismic">
+          <input type="checkbox" id="toggle-seismic" checked aria-describedby="desc-seismic" />
+          <span class="toggle-track" aria-hidden="true"></span>
+          <span class="toggle-label">Seismic Catalog</span>
+        </label>
+        <p id="desc-seismic" class="sr-only">Toggle display of earthquake hypocenters</p>
+
+        <label class="layer-toggle" for="toggle-terrain">
+          <input type="checkbox" id="toggle-terrain" checked aria-describedby="desc-terrain" />
+          <span class="toggle-track" aria-hidden="true"></span>
+          <span class="toggle-label">Base Map</span>
+        </label>
+        <p id="desc-terrain" class="sr-only">Toggle display of the Mapbox satellite base map</p>
+
+        <label class="layer-toggle" for="toggle-volcanoes">
+          <input type="checkbox" id="toggle-volcanoes" checked aria-describedby="desc-volcanoes" />
+          <span class="toggle-track" aria-hidden="true"></span>
+          <span class="toggle-label">Volcanic Arcs</span>
+        </label>
+        <p id="desc-volcanoes" class="sr-only">Toggle display of active volcanic nodes and hazard zones</p>
+
+        <label class="layer-toggle" for="toggle-trenches">
+          <input type="checkbox" id="toggle-trenches" checked aria-describedby="desc-trenches" />
+          <span class="toggle-track" aria-hidden="true"></span>
+          <span class="toggle-label">Subduction Trenches</span>
+        </label>
+        <p id="desc-trenches" class="sr-only">Toggle display of oceanic subduction trench boundaries</p>
+
+        <label class="layer-toggle" for="toggle-grid">
+          <input type="checkbox" id="toggle-grid" checked aria-describedby="desc-grid" />
+          <span class="toggle-track" aria-hidden="true"></span>
+          <span class="toggle-label">Coord Grid</span>
+        </label>
+        <p id="desc-grid" class="sr-only">Toggle display of the coordinate reference grid</p>
+
+        <label class="layer-toggle" for="toggle-pdz">
+          <input type="checkbox" id="toggle-pdz" checked aria-describedby="desc-pdz" />
+          <span class="toggle-track" aria-hidden="true"></span>
+          <span class="toggle-label">PDZ Geofences</span>
+        </label>
+        <p id="desc-pdz" class="sr-only">Toggle display of Permanent Danger Zone boundaries</p>
+
+      </div>
+    </section>
+
+
+
+    <section class="panel-section" aria-labelledby="filter-heading">
+      <h2 class="panel-heading" id="filter-heading">MAGNITUDE FILTER</h2>
+      <div class="range-control">
+        <label for="mag-min" class="range-label">
+          Min M<sub>w</sub>: <span id="mag-min-val" aria-live="polite">1.0</span>
+        </label>
+        <input type="range" id="mag-min" min="1.0" max="9.0" step="0.1" value="1.0"
+               aria-valuemin="1.0" aria-valuemax="9.0" aria-valuenow="1.0" />
+      </div>
+      <div class="range-control">
+        <label for="mag-max" class="range-label">
+          Max M<sub>w</sub>: <span id="mag-max-val" aria-live="polite">9.0</span>
+        </label>
+        <input type="range" id="mag-max" min="1.0" max="9.0" step="0.1" value="9.0"
+               aria-valuemin="1.0" aria-valuemax="9.0" aria-valuenow="9.0" />
+      </div>
+    </section>
+
+    <section class="panel-section" aria-labelledby="depth-heading">
+      <h2 class="panel-heading" id="depth-heading">DEPTH FILTER (km)</h2>
+      <div class="range-control">
+        <label for="depth-max" class="range-label">
+          Max Depth: <span id="depth-max-val" aria-live="polite">700</span> km
+        </label>
+        <input type="range" id="depth-max" min="0" max="700" step="10" value="700"
+               aria-valuemin="0" aria-valuemax="700" aria-valuenow="700" />
+      </div>
+    </section>
+
+    <section class="panel-section" aria-labelledby="colormap-heading">
+      <h2 class="panel-heading" id="colormap-heading">COLOR ENCODING</h2>
+      <div class="radio-group" role="radiogroup" aria-labelledby="colormap-heading">
+        <label class="radio-option"><input type="radio" name="colormap" value="depth" checked /> Depth</label>
+        <label class="radio-option"><input type="radio" name="colormap" value="magnitude" /> Magnitude</label>
+        <label class="radio-option"><input type="radio" name="colormap" value="pga" /> PGA</label>
+      </div>
+    </section>
+
+  </aside>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       RIGHT PANEL — TELEMETRY + LIVE FEED
+  ══════════════════════════════════════════════════════════════ -->
+  <aside id="panel-right" role="complementary" aria-label="Telemetry and live feed">
+
+    <!-- Selected event telemetry -->
+    <section class="panel-section" aria-labelledby="telemetry-heading">
+      <h2 class="panel-heading" id="telemetry-heading">SELECTED EVENT</h2>
+      <div id="telemetry-display" aria-live="polite" aria-atomic="true">
+        <div class="telem-row"><span class="telem-key">EVENT ID</span>    <span class="telem-val" id="t-id">—</span></div>
+        <div class="telem-row"><span class="telem-key">DATE / TIME</span> <span class="telem-val" id="t-time">—</span></div>
+        <div class="telem-row"><span class="telem-key">LOCATION</span>    <span class="telem-val telem-place" id="t-place">—</span></div>
+        <div class="telem-row"><span class="telem-key">LATITUDE</span>    <span class="telem-val" id="t-lat">—</span></div>
+        <div class="telem-row"><span class="telem-key">LONGITUDE</span>   <span class="telem-val" id="t-lon">—</span></div>
+        <div class="telem-row"><span class="telem-key">DEPTH</span>       <span class="telem-val" id="t-depth">— km</span></div>
+        <div class="telem-row"><span class="telem-key">MAG M<sub>w</sub></span>
+                                                                           <span class="telem-val" id="t-mag">—</span></div>
+        <div class="telem-row"><span class="telem-key">STK/DIP/RKE</span><span class="telem-val" id="t-focal">—</span></div>
+        <div class="telem-row"><span class="telem-key">Vs30</span>        <span class="telem-val" id="t-vs30">— m/s</span></div>
+        <div class="telem-row"><span class="telem-key">PGA</span>         <span class="telem-val" id="t-pga">— g</span></div>
+        <div class="telem-row"><span class="telem-key">SOURCE</span>      <span class="telem-val" id="t-src">—</span></div>
+      </div>
+    </section>
+
+    <!-- Focal mechanism beachball -->
+    <section class="panel-section" aria-labelledby="beachball-heading">
+      <h2 class="panel-heading" id="beachball-heading">FOCAL MECHANISM</h2>
+      <canvas id="beachball-canvas" width="140" height="140"
+              role="img" aria-label="Focal mechanism beachball diagram"
+              aria-describedby="beachball-desc"></canvas>
+      <p id="beachball-desc" class="sr-only">
+        Lower-hemisphere stereographic projection of fault plane solution.
+        Compressional quadrants shown in cyan; dilatational in black.
+      </p>
+    </section>
+
+    <!-- Live earthquake feed -->
+    <section class="panel-section" aria-labelledby="live-feed-heading">
+      <div class="panel-heading-row">
+        <h2 class="panel-heading" id="live-feed-heading">LIVE FEED</h2>
+        <button id="live-feed-toggle" class="feed-toggle-btn"
+                aria-expanded="true" aria-controls="live-feed-list"
+                aria-label="Collapse live feed">▾</button>
+      </div>
+      <div id="live-feed-list" role="list" aria-label="Recent earthquakes from PHIVOLCS and USGS">
+        <div class="feed-empty">Fetching live data…</div>
+      </div>
+    </section>
+
+    <!-- Volcano status -->
+    <section class="panel-section" aria-labelledby="volcano-heading">
+      <h2 class="panel-heading" id="volcano-heading">VOLCANIC STATUS</h2>
+      <div id="volcano-list" role="list" aria-label="Active volcano status list"></div>
+    </section>
+
+  </aside>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       BOTTOM TIMELINE BAR
+  ══════════════════════════════════════════════════════════════ -->
+  <footer id="hud-bottom" role="contentinfo" aria-label="Timeline scrubber">
+    <div class="timeline-controls">
+      <button id="btn-play"  class="ctrl-btn" aria-label="Play timeline"  aria-pressed="false"><span aria-hidden="true">▶</span></button>
+      <button id="btn-pause" class="ctrl-btn" aria-label="Pause timeline" aria-pressed="true"> <span aria-hidden="true">⏸</span></button>
+      <button id="btn-reset" class="ctrl-btn" aria-label="Reset to 1990">                      <span aria-hidden="true">⟳</span></button>
+    </div>
+    <div class="timeline-slider-wrap">
+      <span class="timeline-epoch" aria-hidden="true">1990</span>
+      <input type="range" id="timeline-scrubber" min="1990" max="2026" step="0.1" value="2026"
+             aria-label="Timeline year" aria-valuemin="1990" aria-valuemax="2026" aria-valuenow="2026" />
+      <span class="timeline-epoch" aria-hidden="true">2026</span>
+    </div>
+    <div class="timeline-readout">
+      <span class="status-label">ACTIVE YEAR</span>
+      <span class="status-value" id="timeline-year-display" aria-live="polite">2026</span>
+    </div>
+    <div class="timeline-controls">
+      <label for="playback-speed" class="status-label">SPEED</label>
+      <select id="playback-speed" aria-label="Playback speed">
+        <option value="0.5">0.5×</option>
+        <option value="1" selected>1×</option>
+        <option value="2">2×</option>
+        <option value="5">5×</option>
+        <option value="10">10×</option>
+      </select>
+    </div>
+  </footer>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       HOVER TOOLTIP
+  ══════════════════════════════════════════════════════════════ -->
+  <div id="event-tooltip" role="tooltip" aria-hidden="true">
+    <div id="tooltip-content"></div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       SITUATIONAL MEDIA PANEL
+  ══════════════════════════════════════════════════════════════ -->
+  <div id="media-panel" role="dialog" aria-modal="true"
+       aria-label="Situational event report" aria-hidden="true" hidden>
+
+    <div class="mp-header">
+      <div class="mp-title-row">
+        <span class="mp-icon" aria-hidden="true">⚡</span>
+        <span class="mp-title">SITUATIONAL REPORT</span>
+        <span class="mp-event-id" id="mp-event-id">—</span>
+      </div>
+      <button id="mp-close" class="mp-close-btn" aria-label="Close situational report">✕</button>
+    </div>
+
+    <div id="mp-damage-badge" class="damage-badge" hidden>
+      <span class="damage-badge-icon" aria-hidden="true">▲</span>
+      <span id="mp-damage-label">—</span>
+    </div>
+
+    <div class="mp-telem-grid" aria-label="Event telemetry">
+      <div class="mp-telem-row"><span class="mp-telem-key">MAGNITUDE</span>   <span class="mp-telem-val" id="mp-mag">—</span></div>
+      <div class="mp-telem-row"><span class="mp-telem-key">DEPTH</span>        <span class="mp-telem-val" id="mp-depth">—</span></div>
+      <div class="mp-telem-row"><span class="mp-telem-key">LATITUDE</span>     <span class="mp-telem-val" id="mp-lat">—</span></div>
+      <div class="mp-telem-row"><span class="mp-telem-key">LONGITUDE</span>    <span class="mp-telem-val" id="mp-lon">—</span></div>
+      <div class="mp-telem-row"><span class="mp-telem-key">DATE / TIME</span>  <span class="mp-telem-val" id="mp-time">—</span></div>
+      <div class="mp-telem-row"><span class="mp-telem-key">LOCATION</span>     <span class="mp-telem-val mp-place" id="mp-place">—</span></div>
+      <div class="mp-telem-row"><span class="mp-telem-key">STK/DIP/RKE</span> <span class="mp-telem-val" id="mp-focal">—</span></div>
+      <div class="mp-telem-row"><span class="mp-telem-key">SOURCE</span>       <span class="mp-telem-val" id="mp-source-label">—</span></div>
+    </div>
+
+    <div class="mp-media-section">
+      <div class="mp-media-header">
+        <span class="mp-section-label">DAMAGE MEDIA FEED</span>
+        <span class="mp-media-flag" id="mp-media-flag">MEDIA: —</span>
+      </div>
+      <div id="mp-image-wrap" class="mp-image-wrap" hidden>
+        <img id="mp-damage-image" class="mp-damage-image"
+             src="" alt="" loading="lazy" aria-describedby="mp-damage-label" />
+      </div>
+      <div id="mp-no-media" class="mp-no-media" aria-live="polite">
+        NO MEDIA FOR THIS EVENT
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       LOADING OVERLAY
+  ══════════════════════════════════════════════════════════════ -->
+  <div id="loading-overlay" role="status" aria-label="Loading CISV" aria-live="assertive">
+    <div class="loader-inner">
+      <div class="loader-ring" aria-hidden="true"></div>
+      <p class="loader-text">INITIALIZING CISV ENGINE</p>
+      <p class="loader-sub" id="loader-sub-text">Connecting to PHIVOLCS live feed…</p>
+      <div class="loader-bar-wrap" aria-hidden="true">
+        <div class="loader-bar" id="loader-bar"></div>
+      </div>
+      <p class="loader-attribution">
+        Data: <a href="https://earthquake.phivolcs.dost.gov.ph/" target="_blank" rel="noopener">PHIVOLCS</a>
+        · <a href="https://earthquake.usgs.gov/fdsnws/event/1/" target="_blank" rel="noopener">USGS FDSNWS</a>
+        · Map: <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>
+        / <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OSM</a>
+      </p>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
