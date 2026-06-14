@@ -99,10 +99,7 @@ export class MonteCarloSimulator {
   findNearbyFaults(lat, lon) {
     return ACTIVE_FAULTS
       .map(f => {
-        // Approximate fault centroid from strike and length
-        const halfLen = f.length / 2;
-        const strikeRad = f.strike * Math.PI / 180;
-        const centroidLat = f.dip ? f.dip : lat; // use zone lat as proxy
+        const centroidLat = f.lat ?? lat;
         const centroidLon = f.lon ?? lon;
         const dist = this.haversine(lat, lon, centroidLat, centroidLon);
         return { ...f, dist, centroidLat, centroidLon };

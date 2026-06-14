@@ -60,47 +60,47 @@ export const SEISMOGENIC_ZONES = [
 //   characteristic magnitude (Mf), occurrence frequency (vp)
 
 export const ACTIVE_FAULTS = [
-  { id: 1,  name: 'Marikina Fault Segment 1',       type: 'A', length: 52,  dip: 65, strike: 330, Mf: 6.9, vp: 7.86e-04, slipRate: 'high' },
-  { id: 2,  name: 'Marikina Fault Segment 2',       type: 'A', length: 55,  dip: 60, strike: 325, Mf: 7.0, vp: 5.72e-04, slipRate: 'high' },
-  { id: 3,  name: 'Cotabato Fault Segment 1',       type: 'A', length: 80,  dip: 55, strike: 195, Mf: 7.3, vp: 3.82e-04, slipRate: 'high' },
-  { id: 4,  name: 'Cotabato Fault Segment 2',       type: 'A', length: 78,  dip: 60, strike: 200, Mf: 7.2, vp: 3.93e-04, slipRate: 'high' },
-  { id: 5,  name: 'Kokata',                        type: 'A', length: 69,  dip: 70, strike: 180, Mf: 7.7, vp: 3.32e-04, slipRate: 'high' },
-  { id: 6,  name: 'PaoHis',                       type: 'A', length: 80,  dip: 75, strike: 170, Mf: 7.0, vp: 4.00e-04, slipRate: 'high' },
-  { id: 7,  name: 'Philippine Fault Mindanao 1',   type: 'A', length: 136, dip: 73, strike: 120, Mf: 7.6, vp: 2.74e-03, slipRate: 'high' },
-  { id: 8,  name: 'Philippine Fault Mindanao 2',   type: 'A', length: 148, dip: 72, strike: 115, Mf: 7.7, vp: 2.58e-03, slipRate: 'high' },
-  { id: 9,  name: 'Philippine Fault Bicol',        type: 'A', length: 120, dip: 76, strike: 20, Mf: 7.6, vp: 2.87e-03, slipRate: 'high' },
-  { id: 10, name: 'Philippine Fault Surigao',      type: 'A', length: 85,  dip: 70, strike: 90, Mf: 7.2, vp: 2.76e-04, slipRate: 'high' },
-  { id: 11, name: 'Central Mindanao Fault 1',      type: 'A', length: 60,  dip: 72, strike: 40, Mf: 7.2, vp: 5.46e-04, slipRate: 'high' },
-  { id: 12, name: 'Central Mindanao Fault 2',      type: 'A', length: 55,  dip: 76, strike: 35, Mf: 7.0, vp: 6.93e-04, slipRate: 'high' },
-  { id: 13, name: 'Central Mindanao Fault 3',      type: 'A', length: 50,  dip: 79, strike: 45, Mf: 7.2, vp: 5.20e-04, slipRate: 'high' },
-  { id: 14, name: 'Tibang Fault',                  type: 'A', length: 68,  dip: 76, strike: 30, Mf: 7.6, vp: 3.92e-04, slipRate: 'high' },
-  { id: 15, name: 'Sibuyan Sea Fault',            type: 'A', length: 79,  dip: 72, strike: 60, Mf: 7.2, vp: 5.24e-04, slipRate: 'high' },
-  { id: 16, name: 'Tablas Fault 1',               type: 'A', length: 80,  dip: 73, strike: 55, Mf: 7.3, vp: 4.00e-04, slipRate: 'high' },
-  { id: 17, name: 'Tablas Fault 2',               type: 'A', length: 75,  dip: 74, strike: 50, Mf: 7.4, vp: 4.16e-04, slipRate: 'high' },
-  { id: 18, name: 'Sulu Trench',                  type: 'A', length: 180, dip: 78, strike: 40, Mf: 7.8, vp: 2.82e-04, slipRate: 'high' },
-  { id: 19, name: 'East Luzon Trench 1',          type: 'B', length: 250, dip: 82, strike: 10, Mf: 8.2, vp: 1.50e-03, slipRate: 'moderate' },
-  { id: 20, name: 'East Luzon Trench 2',          type: 'B', length: 280, dip: 82, strike: 15, Mf: 8.2, vp: 1.80e-03, slipRate: 'moderate' },
-  { id: 21, name: 'East Luzon Trench 3',          type: 'B', length: 270, dip: 82, strike: 12, Mf: 8.2, vp: 1.70e-03, slipRate: 'moderate' },
-  { id: 22, name: 'East Luzon Trench 4',          type: 'B', length: 260, dip: 82, strike: 8, Mf: 8.2, vp: 1.60e-03, slipRate: 'moderate' },
-  { id: 23, name: 'Philippine Trench 1',          type: 'A', length: 350, dip: 80, strike: 135, Mf: 8.3, vp: 1.67e-03, slipRate: 'high' },
-  { id: 24, name: 'Philippine Trench 2',          type: 'A', length: 380, dip: 78, strike: 130, Mf: 8.2, vp: 2.09e-03, slipRate: 'high' },
-  { id: 25, name: 'Philippine Trench 3',          type: 'A', length: 320, dip: 80, strike: 140, Mf: 7.8, vp: 2.10e-03, slipRate: 'high' },
-  { id: 26, name: 'Philippine Trench 4',          type: 'A', length: 290, dip: 75, strike: 125, Mf: 7.7, vp: 1.50e-03, slipRate: 'high' },
-  { id: 27, name: 'Manila Trench 1',              type: 'A', length: 280, dip: 79, strike: 355, Mf: 7.9, vp: 2.50e-03, slipRate: 'high' },
-  { id: 28, name: 'Manila Trench 2',              type: 'A', length: 260, dip: 76, strike: 350, Mf: 7.6, vp: 3.00e-03, slipRate: 'high' },
-  { id: 29, name: 'Manila Trench 3',              type: 'A', length: 270, dip: 78, strike: 358, Mf: 7.8, vp: 2.50e-03, slipRate: 'high' },
-  { id: 30, name: 'Manila Trench 4',              type: 'A', length: 250, dip: 77, strike: 352, Mf: 7.7, vp: 2.90e-03, slipRate: 'high' },
-  { id: 31, name: 'Manila Trench 5',              type: 'A', length: 240, dip: 78, strike: 348, Mf: 7.2, vp: 2.50e-03, slipRate: 'high' },
-  { id: 32, name: 'Manila Trench 6',              type: 'A', length: 230, dip: 82, strike: 345, Mf: 7.6, vp: 3.27e-03, slipRate: 'high' },
-  { id: 33, name: 'Cotabato Trench 1',            type: 'A', length: 200, dip: 84, strike: 160, Mf: 7.7, vp: 3.00e-04, slipRate: 'high' },
-  { id: 34, name: 'Casiguran Fault',              type: 'A', length: 85,  dip: 82, strike: 10, Mf: 7.5, vp: 3.77e-04, slipRate: 'high' },
-  { id: 35, name: 'Manila Bay Fracture Zone',     type: 'B', length: 120, dip: 74, strike: 315, Mf: 7.4, vp: 4.25e-05, slipRate: 'low' },
-  { id: 36, name: 'Lubang Fracture Zone',         type: 'B', length: 100, dip: 72, strike: 310, Mf: 6.6, vp: 5.09e-05, slipRate: 'low' },
-  { id: 37, name: 'Mindoro Fault',                type: 'A', length: 90,  dip: 80, strike: 135, Mf: 7.4, vp: 4.94e-04, slipRate: 'high' },
-  { id: 38, name: 'Bohol Fault',                  type: 'A', length: 70,  dip: 78, strike: 90, Mf: 6.8, vp: 9.78e-04, slipRate: 'moderate' },
-  { id: 39, name: 'Philippine Fault Luzon N',     type: 'A', length: 160, dip: 74, strike: 15, Mf: 7.6, vp: 3.58e-03, slipRate: 'high' },
-  { id: 40, name: 'Philippine Fault Luzon S',     type: 'A', length: 140, dip: 76, strike: 20, Mf: 7.6, vp: 4.55e-03, slipRate: 'high' },
-  { id: 41, name: 'Philippine Fault Visayas',     type: 'A', length: 120, dip: 76, strike: 80, Mf: 7.6, vp: 2.91e-03, slipRate: 'high' },
+  { id: 1,  name: 'Marikina Fault Segment 1',       type: 'A', length: 52,  dip: 65, strike: 330, Mf: 6.9, vp: 7.86e-04, slipRate: 'high', lat: 14.65, lon: 121.10 },
+  { id: 2,  name: 'Marikina Fault Segment 2',       type: 'A', length: 55,  dip: 60, strike: 325, Mf: 7.0, vp: 5.72e-04, slipRate: 'high', lat: 14.55, lon: 121.05 },
+  { id: 3,  name: 'Cotabato Fault Segment 1',       type: 'A', length: 80,  dip: 55, strike: 195, Mf: 7.3, vp: 3.82e-04, slipRate: 'high', lat: 7.10, lon: 124.30 },
+  { id: 4,  name: 'Cotabato Fault Segment 2',       type: 'A', length: 78,  dip: 60, strike: 200, Mf: 7.2, vp: 3.93e-04, slipRate: 'high', lat: 7.00, lon: 124.25 },
+  { id: 5,  name: 'Kokata',                        type: 'A', length: 69,  dip: 70, strike: 180, Mf: 7.7, vp: 3.32e-04, slipRate: 'high', lat: 6.80, lon: 124.50 },
+  { id: 6,  name: 'PaoHis',                       type: 'A', length: 80,  dip: 75, strike: 170, Mf: 7.0, vp: 4.00e-04, slipRate: 'high', lat: 6.90, lon: 124.60 },
+  { id: 7,  name: 'Philippine Fault Mindanao 1',   type: 'A', length: 136, dip: 73, strike: 120, Mf: 7.6, vp: 2.74e-03, slipRate: 'high', lat: 8.50, lon: 125.80 },
+  { id: 8,  name: 'Philippine Fault Mindanao 2',   type: 'A', length: 148, dip: 72, strike: 115, Mf: 7.7, vp: 2.58e-03, slipRate: 'high', lat: 7.80, lon: 125.90 },
+  { id: 9,  name: 'Philippine Fault Bicol',        type: 'A', length: 120, dip: 76, strike: 20, Mf: 7.6, vp: 2.87e-03, slipRate: 'high', lat: 13.20, lon: 123.50 },
+  { id: 10, name: 'Philippine Fault Surigao',      type: 'A', length: 85,  dip: 70, strike: 90, Mf: 7.2, vp: 2.76e-04, slipRate: 'high', lat: 9.80, lon: 125.50 },
+  { id: 11, name: 'Central Mindanao Fault 1',      type: 'A', length: 60,  dip: 72, strike: 40, Mf: 7.2, vp: 5.46e-04, slipRate: 'high', lat: 7.20, lon: 124.40 },
+  { id: 12, name: 'Central Mindanao Fault 2',      type: 'A', length: 55,  dip: 76, strike: 35, Mf: 7.0, vp: 6.93e-04, slipRate: 'high', lat: 7.15, lon: 124.35 },
+  { id: 13, name: 'Central Mindanao Fault 3',      type: 'A', length: 50,  dip: 79, strike: 45, Mf: 7.2, vp: 5.20e-04, slipRate: 'high', lat: 7.10, lon: 124.45 },
+  { id: 14, name: 'Tibang Fault',                  type: 'A', length: 68,  dip: 76, strike: 30, Mf: 7.6, vp: 3.92e-04, slipRate: 'high', lat: 6.70, lon: 124.80 },
+  { id: 15, name: 'Sibuyan Sea Fault',            type: 'A', length: 79,  dip: 72, strike: 60, Mf: 7.2, vp: 5.24e-04, slipRate: 'high', lat: 12.30, lon: 122.50 },
+  { id: 16, name: 'Tablas Fault 1',               type: 'A', length: 80,  dip: 73, strike: 55, Mf: 7.3, vp: 4.00e-04, slipRate: 'high', lat: 12.40, lon: 122.00 },
+  { id: 17, name: 'Tablas Fault 2',               type: 'A', length: 75,  dip: 74, strike: 50, Mf: 7.4, vp: 4.16e-04, slipRate: 'high', lat: 12.35, lon: 122.10 },
+  { id: 18, name: 'Sulu Trench',                  type: 'A', length: 180, dip: 78, strike: 40, Mf: 7.8, vp: 2.82e-04, slipRate: 'high', lat: 5.50, lon: 120.00 },
+  { id: 19, name: 'East Luzon Trench 1',          type: 'B', length: 250, dip: 82, strike: 10, Mf: 8.2, vp: 1.50e-03, slipRate: 'moderate', lat: 17.50, lon: 123.50 },
+  { id: 20, name: 'East Luzon Trench 2',          type: 'B', length: 280, dip: 82, strike: 15, Mf: 8.2, vp: 1.80e-03, slipRate: 'moderate', lat: 17.20, lon: 123.60 },
+  { id: 21, name: 'East Luzon Trench 3',          type: 'B', length: 270, dip: 82, strike: 12, Mf: 8.2, vp: 1.70e-03, slipRate: 'moderate', lat: 16.90, lon: 123.70 },
+  { id: 22, name: 'East Luzon Trench 4',          type: 'B', length: 260, dip: 82, strike: 8, Mf: 8.2, vp: 1.60e-03, slipRate: 'moderate', lat: 16.60, lon: 123.80 },
+  { id: 23, name: 'Philippine Trench 1',          type: 'A', length: 350, dip: 80, strike: 135, Mf: 8.3, vp: 1.67e-03, slipRate: 'high', lat: 10.00, lon: 127.00 },
+  { id: 24, name: 'Philippine Trench 2',          type: 'A', length: 380, dip: 78, strike: 130, Mf: 8.2, vp: 2.09e-03, slipRate: 'high', lat: 8.50, lon: 127.20 },
+  { id: 25, name: 'Philippine Trench 3',          type: 'A', length: 320, dip: 80, strike: 140, Mf: 7.8, vp: 2.10e-03, slipRate: 'high', lat: 7.00, lon: 127.00 },
+  { id: 26, name: 'Philippine Trench 4',          type: 'A', length: 290, dip: 75, strike: 125, Mf: 7.7, vp: 1.50e-03, slipRate: 'high', lat: 6.00, lon: 127.00 },
+  { id: 27, name: 'Manila Trench 1',              type: 'A', length: 280, dip: 79, strike: 355, Mf: 7.9, vp: 2.50e-03, slipRate: 'high', lat: 15.50, lon: 119.50 },
+  { id: 28, name: 'Manila Trench 2',              type: 'A', length: 260, dip: 76, strike: 350, Mf: 7.6, vp: 3.00e-03, slipRate: 'high', lat: 15.00, lon: 119.60 },
+  { id: 29, name: 'Manila Trench 3',              type: 'A', length: 270, dip: 78, strike: 358, Mf: 7.8, vp: 2.50e-03, slipRate: 'high', lat: 14.50, lon: 119.70 },
+  { id: 30, name: 'Manila Trench 4',              type: 'A', length: 250, dip: 77, strike: 352, Mf: 7.7, vp: 2.90e-03, slipRate: 'high', lat: 14.00, lon: 119.80 },
+  { id: 31, name: 'Manila Trench 5',              type: 'A', length: 240, dip: 78, strike: 348, Mf: 7.2, vp: 2.50e-03, slipRate: 'high', lat: 13.50, lon: 119.90 },
+  { id: 32, name: 'Manila Trench 6',              type: 'A', length: 230, dip: 82, strike: 345, Mf: 7.6, vp: 3.27e-03, slipRate: 'high', lat: 13.00, lon: 120.00 },
+  { id: 33, name: 'Cotabato Trench 1',            type: 'A', length: 200, dip: 84, strike: 160, Mf: 7.7, vp: 3.00e-04, slipRate: 'high', lat: 6.00, lon: 125.00 },
+  { id: 34, name: 'Casiguran Fault',              type: 'A', length: 85,  dip: 82, strike: 10, Mf: 7.5, vp: 3.77e-04, slipRate: 'high', lat: 16.20, lon: 122.10 },
+  { id: 35, name: 'Manila Bay Fracture Zone',     type: 'B', length: 120, dip: 74, strike: 315, Mf: 7.4, vp: 4.25e-05, slipRate: 'low', lat: 14.20, lon: 120.60 },
+  { id: 36, name: 'Lubang Fracture Zone',         type: 'B', length: 100, dip: 72, strike: 310, Mf: 6.6, vp: 5.09e-05, slipRate: 'low', lat: 13.80, lon: 120.20 },
+  { id: 37, name: 'Mindoro Fault',                type: 'A', length: 90,  dip: 80, strike: 135, Mf: 7.4, vp: 4.94e-04, slipRate: 'high', lat: 13.00, lon: 121.00 },
+  { id: 38, name: 'Bohol Fault',                  type: 'A', length: 70,  dip: 78, strike: 90, Mf: 6.8, vp: 9.78e-04, slipRate: 'moderate', lat: 9.90, lon: 124.20 },
+  { id: 39, name: 'Philippine Fault Luzon N',     type: 'A', length: 160, dip: 74, strike: 15, Mf: 7.6, vp: 3.58e-03, slipRate: 'high', lat: 16.50, lon: 121.50 },
+  { id: 40, name: 'Philippine Fault Luzon S',     type: 'A', length: 140, dip: 76, strike: 20, Mf: 7.6, vp: 4.55e-03, slipRate: 'high', lat: 15.00, lon: 121.30 },
+  { id: 41, name: 'Philippine Fault Visayas',     type: 'A', length: 120, dip: 76, strike: 80, Mf: 7.6, vp: 2.91e-03, slipRate: 'high', lat: 10.50, lon: 124.80 },
 ];
 
 // ── Fault Slip Rate Types (Table 2 from paper) ──────────────────────────────
@@ -302,6 +302,132 @@ export function poissonExceedance(occurrenceRate, timeYears) {
 
 export function gutenbergRichterRate(mag, a, b) {
   return Math.pow(10, a - b * mag);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Time-dependent & aftershock statistics (for narrowing WHEN/WHERE)
+//
+// These extend the paper's Poisson model with:
+//   • Brownian Passage Time (BPT) renewal — time-dependent (not memoryless)
+//   • Båth's law — largest expected aftershock
+//   • Reasenberg-Jones (1989) — aftershock exceedance probability
+//   • ETAS branching ratio — aftershock productivity / cascade potential
+//
+// References:
+//   Matthews, Ellsworth & Reasenberg (2002), BSSA 92(6) — BPT renewal model
+//   Reasenberg & Jones (1989), Science 243 — aftershock forecasting
+//   Båth (1965); Utsu, Ogata & Matsu'ura (1995) — Omori-Utsu / aftershock laws
+//   Helmstetter & Sornette (2002) — ETAS branching ratio
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Brownian Passage Time conditional hazard — probability that a characteristic
+ * earthquake occurs within `windowYears` GIVEN none has occurred for `elapsed`
+ * years, on a fault with mean recurrence `meanInterval` and aperiodicity `alpha`.
+ *
+ * Unlike Poisson (memoryless), BPT hazard RISES as elapsed → meanInterval, so an
+ * overdue fault yields a higher near-term probability. This is what narrows the
+ * timing window.
+ *
+ * @param {number} elapsed       Years since the last characteristic event
+ * @param {number} windowYears   Forecast window length (years)
+ * @param {number} meanInterval  Mean recurrence interval (years)
+ * @param {number} [alpha=0.5]   Aperiodicity (coefficient of variation), 0.3-0.7 typical
+ * @returns {number}             Conditional probability in [0, 1]
+ */
+export function bptHazard(elapsed, windowYears, meanInterval, alpha = 0.5) {
+  if (meanInterval <= 0) return 0;
+  // BPT (inverse Gaussian) survival via CDF. Conditional prob:
+  //   P = [F(t+Δ) - F(t)] / [1 - F(t)]
+  const F = (t) => {
+    if (t <= 0) return 0;
+    const mu = meanInterval;
+    const a = alpha;
+    const u1 = (t / mu - 1) / (a * Math.sqrt(t / mu));
+    const u2 = (t / mu + 1) / (a * Math.sqrt(t / mu));
+    const phi = (x) => 0.5 * (1 + _erf(x / Math.SQRT2));
+    return phi(u1) + Math.exp(2 / (a * a)) * phi(-u2);
+  };
+  const Ft  = F(elapsed);
+  const Ftw = F(elapsed + windowYears);
+  const surv = 1 - Ft;
+  if (surv <= 1e-9) return 1; // effectively certain — far past mean interval
+  return Math.min(1, Math.max(0, (Ftw - Ft) / surv));
+}
+
+/** Abramowitz-Stegun 7.1.26 error-function approximation (max err 1.5e-7). */
+function _erf(x) {
+  const sign = x < 0 ? -1 : 1;
+  x = Math.abs(x);
+  const t = 1 / (1 + 0.3275911 * x);
+  const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t
+    - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+  return sign * y;
+}
+
+/**
+ * Båth's law — the largest aftershock is on average ~1.2 magnitude units below
+ * the mainshock (regionally 1.0-1.4).
+ * @param {number} mainshockMag
+ * @param {number} [delta=1.2]
+ * @returns {number}
+ */
+export function bathLargestAftershock(mainshockMag, delta = 1.2) {
+  return Math.max(0, mainshockMag - delta);
+}
+
+/**
+ * Reasenberg-Jones (1989) probability of at least one aftershock with magnitude
+ * ≥ `mMin` during the time window [t1, t2] days after a mainshock of magnitude
+ * `mMain`. Uses the modified-Omori + Gutenberg-Richter generic-California
+ * parameters as defaults; pass region-specific a,b,p,c when known.
+ *
+ * Expected count N = 10^(a + b·(mMain − mMin)) · [ (t2+c)^(1−p) − (t1+c)^(1−p) ] / (1−p)
+ * P(≥1) = 1 − exp(−N)
+ *
+ * @param {number} mMain   Mainshock magnitude
+ * @param {number} mMin    Threshold magnitude of interest
+ * @param {number} t1      Window start (days after mainshock)
+ * @param {number} t2      Window end (days after mainshock)
+ * @param {object} [p]     { a=-1.67, b=0.91, p=1.08, c=0.05 }
+ * @returns {{ expectedCount:number, probAtLeastOne:number }}
+ */
+export function reasenbergJonesProb(mMain, mMin, t1, t2, p = {}) {
+  const a = p.a ?? -1.67;
+  const b = p.b ?? 0.91;
+  const pVal = p.p ?? 1.08;
+  const c = p.c ?? 0.05;
+  const t1c = Math.max(0, t1);
+  const t2c = Math.max(t1c, t2);
+  let timeIntegral;
+  if (Math.abs(1 - pVal) < 1e-6) {
+    timeIntegral = Math.log((t2c + c) / (t1c + c));
+  } else {
+    timeIntegral = (Math.pow(t2c + c, 1 - pVal) - Math.pow(t1c + c, 1 - pVal)) / (1 - pVal);
+  }
+  const N = Math.pow(10, a + b * (mMain - mMin)) * timeIntegral;
+  const expectedCount = Math.max(0, N);
+  return { expectedCount, probAtLeastOne: 1 - Math.exp(-expectedCount) };
+}
+
+/**
+ * ETAS branching ratio n — the average number of directly-triggered events per
+ * event. n→1 means a near-critical sequence (high cascade / large-triggered-event
+ * potential); n<1 is sub-critical and decays. Derived from aftershock
+ * productivity α, GR b-value, and magnitude range.
+ *
+ * n = (b·ln10 · K) / (b·ln10 − α) · (1 − 10^(−(b·... )))  [simplified, clamped]
+ *
+ * @param {number} bValue   Gutenberg-Richter b
+ * @param {number} [alpha=0.8]  ETAS productivity exponent (per mag unit)
+ * @param {number} [K=0.5]   Productivity scale (calibration)
+ * @returns {number}         Branching ratio in [0, ~1.2]
+ */
+export function etasBranchingRatio(bValue, alpha = 0.8, K = 0.5) {
+  const bLn10 = bValue * Math.LN10;
+  if (bLn10 <= alpha) return 1.2; // super-critical regime (rare); clamp high
+  const n = (bLn10 / (bLn10 - alpha)) * K;
+  return Math.min(1.2, Math.max(0, n));
 }
 
 // ── JMA Intensity Conversion (for PEIS mapping) ─────────────────────────────
