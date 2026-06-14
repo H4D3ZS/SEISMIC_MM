@@ -16,6 +16,8 @@
     "tauri:build": "tauri build",
     "gfm:download": "python -c \"from huggingface_hub import snapshot_download; snapshot_download('thinkonward/geophysical-foundation-model', local_dir='gfm-weights')\"",
     "gfm:pull": "ollama pull gemma4:12b",
+    "train": "node train_model.js --iterations=50000 --output=trained_weights.json",
+    "train:full": "node train_model.js --iterations=500000 --output=trained_weights.json",
     "setup": "npm install && pip install flask flask-cors torch pillow huggingface_hub"
   },
   "dependencies": {

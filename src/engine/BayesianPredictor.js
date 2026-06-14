@@ -66,6 +66,16 @@ class BayesianLinear {
     this.logPrior = 0;
   }
 
+  /**
+   * Load trained weights from exported data.
+   */
+  loadWeights(data) {
+    this.weightMu = new Float64Array(data.weightMu);
+    this.weightRho = new Float64Array(data.weightRho);
+    this.biasMu = new Float64Array(data.biasMu);
+    this.biasRho = new Float64Array(data.biasRho);
+  }
+
   _normalInit(size, mean, std) {
     const arr = new Float64Array(size);
     for (let i = 0; i < size; i++) {
@@ -205,6 +215,36 @@ export class BayesianPredictor {
 
     // MC samples for uncertainty estimation
     this.mcSamples = 50;
+    this.trained = false;
+  }
+
+  /**
+   * Load pre-trained weights from JSON data.
+   * This replaces random initialization with learned parameters.
+   */
+  loadTrainedWeights(weightsData) {
+    if (!weightsData || !weightsData.layers) {
+      console.warn('[BayesianPredictor] No trained weights provided, using random initialization');
+      return false;
+    }
+    this.layer1.loadWeights(weightsData.layers[0]);
+    this.layer2.loadWeights(weightsData.layers[1]);
+    this.layer3.loadWeights(weightsData.layers[2]);
+    this.trained = true;
+    console.info('[BayesianPredictor] Trained weights loaded successfully');
+    return true;
+  }
+
+  /**
+   * Get training status.
+   */
+  getStatus() {
+    return {
+      trained: this.trained,
+      architecture: `BayesianFC(${this.inputSize}→${this.hiddenSize1}→${this.hiddenSize2}→${this.outputSize})`,
+      prior: `Scale Mixture (π=${this.layer1.priorPi}, σ1=${this.layer1.priorSigma1}, σ2=${this.layer1.priorSigma2})`,
+      mcSamples: this.mcSamples,
+    };
   }
 
   /**
