@@ -38,6 +38,7 @@ import { GFMVisualizer }             from './engine/GFMVisualizer.js';
 import { GeodynamicLayerRenderer }   from './engine/GeodynamicLayerRenderer.js';
 import { NasagradeSeismicSimulator } from './engine/simulation_engine.js';
 import { EarthquakePredictor } from './engine/EarthquakePredictor.js';
+import { QuakeNetPredictor } from './engine/QuakeNetPredictor.js';
 import { HistoricalSeismicityAnalyzer } from './engine/HistoricalSeismicityAnalyzer.js';
 import { PredictionImprover } from './engine/PredictionImprover.js';
 import { BarangayRenderer } from './engine/BarangayRenderer.js';
@@ -291,11 +292,16 @@ async function boot() {
 
   const simulator = new NasagradeSeismicSimulator(engine);
   const predictor = new EarthquakePredictor();
+  const quakeNet = new QuakeNetPredictor();
   const seismicityAnalyzer = new HistoricalSeismicityAnalyzer();
   const improver = new PredictionImprover();
   const barangayRenderer = new BarangayRenderer(engine);
   const civicDashboard = new CivicDashboard(barangayRenderer, gfmVisualizer);
   civicDashboard.setCatalog(catalogResult.events, catalogResult.sources);
+
+  // Ingest all events into QuakeNet 3D grid for spatiotemporal analysis
+  quakeNet.ingestEvents(catalogResult.events);
+  console.info(`[QuakeNet] Ingested ${catalogResult.events.length} events into ${quakeNet.getStats().gridDimensions} grid (${quakeNet.getStats().totalCells} cells)`);
 
   const ui = new UIController({
     catalogRenderer,
@@ -624,6 +630,21 @@ async function boot() {
               slipRate: f.slipRate,
             });
           }
+        }
+      }
+
+      // 4. QuakeNet spatiotemporal predictions (energy-based)
+      const quakeNetPreds = quakeNet.getTopRiskLocations(10, 7);
+      for (const qp of quakeNetPreds) {
+        const key = `${qp.lat.toFixed(2)}_${qp.lon.toFixed(2)}`;
+        if (!seen.has(key) && qp.probability > 0.05) {
+          seen.add(key);
+          candidates.push({
+            lat: qp.lat, lon: qp.lon,
+            source: 'QUAKENET_ENERGY',
+            maxMag: qp.expectedMagnitude,
+            probability: qp.probability,
+          });
         }
       }
 
