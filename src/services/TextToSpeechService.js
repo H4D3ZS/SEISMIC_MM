@@ -146,24 +146,55 @@ export class TextToSpeechService {
   // ── Earthquake Alert Generators ──────────────────────────────────────
 
   /**
-   * Announce a new earthquake event.
+   * Announce a new earthquake event with proper severity-based urgency.
    */
   announceEarthquake(event) {
     const { mag, lat, lon, depth, place } = event;
-    const severity = mag >= 7 ? 'MAJOR' : mag >= 6 ? 'STRONG' : mag >= 5 ? 'MODERATE' : 'MINOR';
 
-    let text = `${severity} earthquake detected. `;
-    text += `Magnitude ${mag.toFixed(1)} `;
-    text += `at ${lat.toFixed(2)} degrees North, ${lon.toFixed(2)} degrees East. `;
-    text += `Depth ${Math.round(depth)} kilometers. `;
-
-    if (place) text += `Location: ${place}. `;
-
-    if (mag >= 6) {
-      text += `This is a significant seismic event. Monitor for aftershocks and secondary hazards. `;
+    // Severity levels matching NASA USGS scale
+    let severity, urgency;
+    if (mag >= 10.0) {
+      severity = 'CATASTROPHIC';
+      urgency = 'critical';
+    } else if (mag >= 8.0) {
+      severity = 'GREAT';
+      urgency = 'critical';
+    } else if (mag >= 7.0) {
+      severity = 'MAJOR';
+      urgency = 'critical';
+    } else if (mag >= 6.0) {
+      severity = 'STRONG';
+      urgency = 'high';
+    } else if (mag >= 5.0) {
+      severity = 'MODERATE';
+      urgency = 'normal';
+    } else {
+      severity = 'MINOR';
+      urgency = 'low';
     }
 
-    this.speak(text, { priority: mag >= 5 ? 'urgent' : 'normal' });
+    let text = `EARTHQUAKE ALERT. ${severity} earthquake detected. `;
+    text += `Magnitude ${mag.toFixed(1)}. `;
+    text += `Location: ${lat.toFixed(2)} degrees North, ${lon.toFixed(2)} degrees East. `;
+    text += `Depth: ${Math.round(depth)} kilometers. `;
+
+    if (place) text += `${place}. `;
+
+    // Escalate warnings for dangerous magnitudes
+    if (mag >= 10.0) {
+      text += `THIS IS A CATASTROPHIC EVENT. Magnitude 10 or greater. Immediate evacuation of all coastal areas. `;
+      text += `Tsunami, liquefaction, and massive structural failure expected. `;
+    } else if (mag >= 8.0) {
+      text += `GREAT EARTHQUAKE. Magnitude 8 or greater. Tsunami warning likely. `;
+      text += `Evacuate coastal zones immediately. Check for structural damage. `;
+    } else if (mag >= 7.0) {
+      text += `MAJOR earthquake. Tsunami possible for nearby coastlines. `;
+      text += `Monitor for aftershocks and secondary hazards. `;
+    } else if (mag >= 6.0) {
+      text += `STRONG earthquake. Structural damage possible. Monitor aftershock sequence. `;
+    }
+
+    this.speak(text, { priority: mag >= 6 ? 'urgent' : 'normal' });
   }
 
   /**

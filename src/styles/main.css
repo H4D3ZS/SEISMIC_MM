@@ -2659,6 +2659,27 @@ select:focus {
 .alert-strong .alert-badge { background: rgba(255, 170, 0, 0.2); color: #ffaa00; border: 1px solid rgba(255, 170, 0, 0.3); }
 .alert-moderate .alert-badge { background: rgba(0, 200, 255, 0.2); color: #00ccff; border: 1px solid rgba(0, 200, 255, 0.3); }
 .alert-minor .alert-badge { background: rgba(0, 255, 136, 0.1); color: #00ff88; border: 1px solid rgba(0, 255, 136, 0.2); }
+.alert-critical .alert-badge { background: rgba(255, 0, 0, 0.3); color: #ff0000; border: 1px solid rgba(255, 0, 0, 0.5); animation: critical-pulse 0.5s ease-in-out infinite; }
+
+.alert-critical {
+  border-color: rgba(255, 0, 0, 0.4) !important;
+  box-shadow: 0 0 30px rgba(255, 0, 0, 0.15), 0 4px 30px rgba(0, 0, 0, 0.5) !important;
+}
+
+.alert-critical::before {
+  background: #ff0000 !important;
+  animation: critical-bar 1s ease-in-out infinite;
+}
+
+@keyframes critical-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes critical-bar {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
 
 .alert-time {
   color: var(--text-dim);

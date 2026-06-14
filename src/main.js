@@ -1167,9 +1167,20 @@ function showAlertPopup(event) {
   if (!container) return;
 
   const { mag, lat, lon, depth, place, time } = event;
-  const severity = mag >= 7 ? 'major' : mag >= 6 ? 'strong' : mag >= 5 ? 'moderate' : 'minor';
-  const severityLabel = mag >= 7 ? 'MAJOR' : mag >= 6 ? 'STRONG' : mag >= 5 ? 'MODERATE' : 'MINOR';
+  let severity, severityLabel;
+  if (mag >= 10.0) { severity = 'critical'; severityLabel = 'CATASTROPHIC'; }
+  else if (mag >= 8.0) { severity = 'critical'; severityLabel = 'GREAT'; }
+  else if (mag >= 7.0) { severity = 'major'; severityLabel = 'MAJOR'; }
+  else if (mag >= 6.0) { severity = 'strong'; severityLabel = 'STRONG'; }
+  else if (mag >= 5.0) { severity = 'moderate'; severityLabel = 'MODERATE'; }
+  else { severity = 'minor'; severityLabel = 'MINOR'; }
+
   const timeStr = time ? new Date(time).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }) : '--:--';
+
+  // Play siren for M6+ events
+  if (mag >= 6.0) {
+    playSiren(mag);
+  }
 
   const alert = document.createElement('div');
   alert.className = `alert-popup alert-${severity}`;
@@ -1187,16 +1198,59 @@ function showAlertPopup(event) {
 
   container.prepend(alert);
 
-  // Auto-dismiss after 8 seconds (minor) or 15 seconds (major)
-  const dismissDelay = severity === 'major' ? 15000 : severity === 'strong' ? 12000 : 8000;
+  // Auto-dismiss: critical stays longest
+  const dismissDelay = severity === 'critical' ? 30000 : severity === 'major' ? 20000 : severity === 'strong' ? 15000 : 10000;
   setTimeout(() => {
     alert.style.animation = 'alert-slide-out 0.3s ease-in forwards';
     setTimeout(() => alert.remove(), 300);
   }, dismissDelay);
 
-  // Limit to 3 visible alerts
+  // Max visible alerts
   while (container.children.length > 3) {
     container.lastChild.remove();
+  }
+}
+
+/**
+ * Play siren alarm sound for M6+ events.
+ * Uses Web Audio API to generate a realistic siren tone.
+ */
+function playSiren(magnitude) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const duration = magnitude >= 8.0 ? 4.0 : magnitude >= 7.0 ? 3.0 : 2.0;
+    const baseFreq = magnitude >= 10.0 ? 880 : magnitude >= 8.0 ? 660 : magnitude >= 7.0 ? 440 : 330;
+
+    // Generate siren waveform
+    const sampleRate = ctx.sampleRate;
+    const numSamples = Math.floor(sampleRate * duration);
+    const buffer = ctx.createBuffer(1, numSamples, sampleRate);
+    const data = buffer.getChannelData(0);
+
+    for (let i = 0; i < numSamples; i++) {
+      const t = i / sampleRate;
+      const progress = t / duration;
+
+      // Frequency sweep: low → high → low
+      const freq = baseFreq * (1 + 0.5 * Math.sin(2 * Math.PI * 2 * t));
+
+      // Amplitude envelope
+      const attack = Math.min(1, t * 10);
+      const decay = Math.max(0, 1 - (t - duration * 0.7) / (duration * 0.3));
+      const amp = 0.3 * attack * decay;
+
+      data[i] = amp * Math.sin(2 * Math.PI * freq * t);
+    }
+
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    source.start();
+
+    // Auto-close context after siren
+    setTimeout(() => ctx.close(), (duration + 1) * 1000);
+  } catch (err) {
+    console.warn('[Siren] Audio context not available:', err.message);
   }
 }
 
