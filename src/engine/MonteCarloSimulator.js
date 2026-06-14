@@ -418,6 +418,112 @@ export class MonteCarloSimulator {
     return totalWeight > 0 ? weightedDist / totalWeight : 30;
   }
 
+  /**
+   * Synchronous version of runSimulation (for training pipelines).
+   * Does NOT yield to event loop — runs all simulations in one go.
+   */
+  runSimulationSync(params) {
+    const { lat, lon, depth = 25, siteGeology = 1 } = params;
+
+    const zones = this.findNearbyZones(lat, lon);
+    const faults = this.findNearbyFaults(lat, lon);
+
+    if (zones.length === 0 && faults.length === 0) {
+      return this._emptyResult(lat, lon);
+    }
+
+    const N = this.numSimulations;
+    const magBuckets = new Float64Array(20);
+    const pgaBuckets = new Float64Array(20);
+    const yearBuckets = new Float64Array(20);
+    const exceedance = { PGA_50gal: 0, PGA_100gal: 0, PGA_200gal: 0, PGA_500gal: 0 };
+    let maxMag = 0, totalPGA = 0, magSum = 0, countValid = 0;
+
+    const totalOccRate = zones.reduce((s, z) => s + z.occRate, 0) +
+                         faults.reduce((s, f) => s + f.vp, 0);
+
+    for (let i = 0; i < N; i++) {
+      const u = this.rng();
+      let cumRate = 0, selectedZone = null, selectedFault = null, isFault = false;
+
+      for (const z of zones) {
+        cumRate += z.occRate;
+        if (u <= cumRate / totalOccRate) { selectedZone = z; break; }
+      }
+      if (!selectedZone) {
+        for (const f of faults) {
+          cumRate += f.vp;
+          if (u <= cumRate / totalOccRate) { selectedFault = f; isFault = true; break; }
+        }
+      }
+      if (!selectedZone && !selectedFault) selectedZone = zones[0];
+
+      let mag, eventLat, eventLon, eventDepth;
+      if (isFault && selectedFault) {
+        mag = Math.max(4.0, Math.min(selectedFault.Mf + (this.rng() - 0.5) * 1.0, 9.0));
+        const strikeRad = selectedFault.strike * Math.PI / 180;
+        const alongFault = (this.rng() - 0.5) * selectedFault.length;
+        eventLat = (selectedFault.lat ?? lat) + alongFault * Math.cos(strikeRad) / 111;
+        eventLon = (selectedFault.lon ?? lon) + alongFault * Math.sin(strikeRad) / (111 * Math.cos(lat * Math.PI / 180));
+        eventDepth = Math.max(5, depth + (this.rng() - 0.5) * 20);
+      } else if (selectedZone) {
+        mag = this.sampleMagnitude(selectedZone.bValue, 4.0, selectedZone.maxMag);
+        eventLat = selectedZone.lat + (this.rng() - 0.5) * 3;
+        eventLon = selectedZone.lon + (this.rng() - 0.5) * 3;
+        eventDepth = selectedZone.focalDepth + (this.rng() - 0.5) * 20;
+      } else { continue; }
+
+      eventDepth = Math.max(1, Math.min(eventDepth, 700));
+      const R = Math.max(ATTENUATION.pga.minDistance, this.haversine(lat, lon, eventLat, eventLon));
+      const pgaGal = computePGA(mag, R);
+      const sitePGA = Math.max(0, pgaGal * (GEOLOGY_AMPLIFICATION[siteGeology]?.betaPGA || 1.0));
+      const sitePGA_g = sitePGA / 981;
+
+      magBuckets[Math.min(19, Math.max(0, Math.floor((mag - 1.0) * 2)))]++;
+      pgaBuckets[Math.min(19, Math.max(0, Math.floor(sitePGA_g * 20)))]++;
+
+      const lambda = isFault ? selectedFault.vp : (selectedZone?.occRate ?? 1e-5);
+      const eventYear = 2026 + this.samplePoissonTime(lambda * 1000);
+      if (eventYear >= 2026 && eventYear <= 2046) {
+        yearBuckets[Math.min(19, Math.floor(eventYear - 2026))]++;
+      }
+
+      if (sitePGA_g > 0.05) exceedance.PGA_50gal++;
+      if (sitePGA_g > 0.10) exceedance.PGA_100gal++;
+      if (sitePGA_g > 0.20) exceedance.PGA_200gal++;
+      if (sitePGA_g > 0.50) exceedance.PGA_500gal++;
+
+      if (mag > maxMag) maxMag = mag;
+      totalPGA += sitePGA_g;
+      magSum += mag;
+      countValid++;
+    }
+
+    return {
+      meta: { lat, lon, depth, siteGeology, numSimulations: N },
+      summary: {
+        maxMagnitude: maxMag,
+        meanMagnitude: countValid > 0 ? magSum / countValid : 0,
+        meanPGA_g: countValid > 0 ? totalPGA / countValid : 0,
+        hazardConsistentMag: this._computeHazardConsistentMag(magBuckets, N),
+        hazardConsistentDist: this._computeHazardConsistentDist(zones, faults, lat, lon),
+        zonesAnalyzed: zones.length,
+        faultsAnalyzed: faults.length,
+      },
+      magDistribution: Array.from(magBuckets),
+      pgaDistribution: Array.from(pgaBuckets),
+      yearDistribution: Array.from(yearBuckets),
+      annualExceedance: {
+        PGA_50gal: exceedance.PGA_50gal / N,
+        PGA_100gal: exceedance.PGA_100gal / N,
+        PGA_200gal: exceedance.PGA_200gal / N,
+        PGA_500gal: exceedance.PGA_500gal / N,
+      },
+      zoneContributions: [],
+      faultContributions: [],
+    };
+  }
+
   _emptyResult(lat, lon) {
     return {
       meta: { lat, lon, numSimulations: 0 },
