@@ -279,7 +279,7 @@ export class MonteCarloSimulator {
         // 6. Apply soil amplification (Eq. 21)
         const geo = GEOLOGY_AMPLIFICATION[siteGeology] || GEOLOGY_AMPLIFICATION[1];
         const betaPGA = computeBetaPGA(geo.Sn, pgaGal);
-        const sitePGA = pgaGal * betaPGA;
+        const sitePGA = Math.max(0, pgaGal * betaPGA);
         const sitePGA_g = sitePGA / 981; // Convert gal to g
 
         // 7. Accumulate results
@@ -392,14 +392,14 @@ export class MonteCarloSimulator {
     const targetProb = 1 / this.returnPeriod;
     let cumProb = 0;
 
-    // Iterate from high to low magnitude
     for (let i = 19; i >= 0; i--) {
       cumProb += magBuckets[i] / N;
       if (cumProb >= targetProb) {
-        return 1.0 + (i + 0.5) * 0.5; // Convert bucket index to magnitude
+        const mag = 1.0 + (i + 0.5) * 0.5;
+        return Math.min(mag, 9.5); // Cap at realistic max
       }
     }
-    return 5.0; // default
+    return 5.0;
   }
 
   /**

@@ -121,7 +121,7 @@ export const ATTENUATION = {
   // Amax = 0.346*Ms - 1.06*log10(R) + 1.69
   pga: {
     coeffMs: 0.346,
-    coeffR: -1.06,
+    coeffR: 1.06,
     intercept: 1.69,
     cov: 0.44,
     minDistance: 20, // km
@@ -131,7 +131,7 @@ export const ATTENUATION = {
   // Vmax = 0.406*Ms - 1.32*log10(R) + 1.44
   pgv: {
     coeffMs: 0.406,
-    coeffR: -1.32,
+    coeffR: 1.32,
     intercept: 1.44,
     cov: 0.56,
     minDistance: 20,
@@ -141,7 +141,7 @@ export const ATTENUATION = {
   // ASI = 0.446*Ms - 1.21*log10(R) + 0.96
   effPGA: {
     coeffMs: 0.446,
-    coeffR: -1.21,
+    coeffR: 1.21,
     intercept: 0.96,
     cov: 0.43,
     minDistance: 20,
