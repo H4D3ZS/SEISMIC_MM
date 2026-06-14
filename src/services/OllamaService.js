@@ -10,16 +10,32 @@
 export class OllamaService {
   /**
    * Fetch available models from local Ollama instance.
+   * Uses Vite proxy in dev mode to bypass CORS.
    * @param {string} hostUrl
    * @returns {Promise<string[]>}
    */
   async listModels(hostUrl) {
-    const res = await fetch(`${hostUrl}/api/tags`);
-    if (!res.ok) {
-      throw new Error(`Ollama connection status error: ${res.statusText}`);
+    // In dev mode, use the Vite proxy to bypass CORS
+    const isDev = window.location.port === '5173';
+    const proxyUrl = isDev ? '/ollama-proxy' : hostUrl;
+
+    try {
+      const res = await fetch(`${proxyUrl}/api/tags`);
+      if (!res.ok) {
+        throw new Error(`Ollama connection status error: ${res.statusText}`);
+      }
+      const data = await res.json();
+      return (data.models ?? []).map(m => m.name);
+    } catch (err) {
+      // If proxy fails, try direct connection (requires OLLAMA_ORIGINS="*")
+      if (isDev) {
+        const res = await fetch(`${hostUrl}/api/tags`);
+        if (!res.ok) throw new Error(`Ollama connection status error: ${res.statusText}`);
+        const data = await res.json();
+        return (data.models ?? []).map(m => m.name);
+      }
+      throw err;
     }
-    const data = await res.json();
-    return (data.models ?? []).map(m => m.name);
   }
 
   /**

@@ -16,6 +16,13 @@ export default defineConfig({
         secure:       false,
         rewrite:      (path) => path.replace(/^\/phivolcs-proxy/, ''),
       },
+      '/ollama-proxy': {
+        target:       'http://localhost:11434',
+        changeOrigin: true,
+        secure:       false,
+        rewrite:      (path) => path.replace(/^\/ollama-proxy/, ''),
+        ws: true,
+      },
     },
   },
   build: {

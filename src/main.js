@@ -327,24 +327,31 @@ async function boot() {
   const submitBtn = document.getElementById('nlp-submit-btn');
   submitBtn?.addEventListener('click', async () => {
     const textEl = document.getElementById('nlp-text');
-    const latEl  = document.getElementById('nlp-lat');
-    const lonEl  = document.getElementById('nlp-lon');
     const peisEl = document.getElementById('nlp-peis');
 
-    if (!textEl || !latEl || !lonEl) return;
+    if (!textEl) return;
 
     const text = textEl.value.trim();
-    const lat  = parseFloat(latEl.value);
-    const lon  = parseFloat(lonEl.value);
     const peis = peisEl ? parseInt(peisEl.value, 10) : 0;
 
     if (!text) {
       alert('Please enter field report text.');
       return;
     }
-    if (isNaN(lat) || isNaN(lon)) {
-      alert('Please enter valid coordinates.');
-      return;
+
+    // Auto-detect coordinates from latest seismic event
+    let lat = 12.0, lon = 122.0;
+    const events = catalogResult?.events ?? [];
+    if (events.length > 0) {
+      lat = events[0].lat;
+      lon = events[0].lon;
+    }
+
+    // Try to extract coordinates from the text itself
+    const coordMatch = text.match(/(\d+\.\d+)[°]?\s*[NnSs],?\s*(\d+\.\d+)[°]?\s*[EeWw]/);
+    if (coordMatch) {
+      lat = parseFloat(coordMatch[1]);
+      lon = parseFloat(coordMatch[2]);
     }
 
     submitBtn.disabled = true;

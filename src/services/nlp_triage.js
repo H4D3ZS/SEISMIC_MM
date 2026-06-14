@@ -28,6 +28,7 @@ export class LocalNLPTriageEngine {
     this.engine = engineInstance;
     this.localInferenceUrl = 'http://localhost:8081/predictions/crisis_transformer';
     this.ollamaEndpoint = 'http://localhost:11434/api/chat';
+    this.ollamaProxy = '/ollama-proxy/api/chat';
   }
 
   /**
@@ -40,9 +41,12 @@ export class LocalNLPTriageEngine {
     // 1. Try local Ollama chat triage first (structured JSON extraction)
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5s timeout for local LLM
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout for local LLM
 
-      const response = await fetch(this.ollamaEndpoint, {
+      const isDev = window.location.port === '5173';
+      const endpoint = isDev ? this.ollamaProxy : this.ollamaEndpoint;
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -75,14 +79,23 @@ export class LocalNLPTriageEngine {
 
       console.info(`[CISV NLP Ollama] parsed field report:`, structuredResult);
 
-      if (structuredResult.structural_damage && structuredResult.severity >= 4) {
+      const sev = structuredResult.severity ?? 0;
+      const dmg = !!structuredResult.structural_damage;
+      if (dmg && sev >= 4) {
         this.plotFieldAnomaly(gpsData.lat, gpsData.lon, "STRUCTURAL_FAILURE");
-      } else if (structuredResult.structural_damage) {
+      } else if (dmg) {
         this.plotDynamicIncidentMarker(gpsData.lat, gpsData.lon, rawText, peisLevel);
       } else {
         console.info('[CISV NLP Ollama] Incident classified as non-structural/minor.');
       }
-      return; // Success, end execution
+      return {
+        source: 'Gemma 4 12B (Ollama)',
+        category: dmg ? 'infrastructure_damage' : 'non-structural',
+        severity: sev,
+        structuralDamage: dmg,
+        plotted: dmg,
+        matched: [],
+      };
     } catch (ollamaErr) {
       console.warn('[CISV NLP] Local Ollama triage failed/offline. Attempting transformer inference fallback:', ollamaErr.message);
     }
@@ -106,16 +119,23 @@ export class LocalNLPTriageEngine {
       }
 
       const classification = await response.json();
-      if (
-        classification.confidence >= 0.88 &&
-        classification.category === 'infrastructure_damage'
-      ) {
+      const hit = classification.confidence >= 0.88 && classification.category === 'infrastructure_damage';
+      if (hit) {
         console.info(`[CISV NLP] NLP classification confirmed: ${classification.category} (${(classification.confidence * 100).toFixed(0)}%)`);
         this.plotDynamicIncidentMarker(gpsData.lat, gpsData.lon, rawText, peisLevel);
       }
+      return {
+        source: 'Crisis Transformer',
+        category: classification.category ?? 'unknown',
+        severity: classification.severity ?? (hit ? 4 : 1),
+        confidence: classification.confidence,
+        structuralDamage: hit,
+        plotted: hit,
+        matched: [],
+      };
     } catch (error) {
       console.warn('[CISV NLP] Local NLP Inference Server unreachable. Falling back to heuristic keyword triage:', error.message);
-      this._runHeuristicFallback(rawText, gpsData, peisLevel);
+      return this._runHeuristicFallback(rawText, gpsData, peisLevel);
     }
   }
 
@@ -167,14 +187,26 @@ export class LocalNLPTriageEngine {
       'blocked', 'hazard', 'cracked', 'bridge down', 'structural'
     ];
 
-    const matched = keywords.filter(word => textLower.includes(word));
+    // Extended hazard lexicon incl. the secondary hazards the user reported.
+    const hazardWords = [...keywords, 'sinkhole', 'liquefaction', 'liquefy', 'tsunami',
+      'flood', 'lake', 'subsidence', 'uplift', 'fissure', 'sand boil', 'casualt', 'injured', 'trapped', 'dead'];
+    const matched = hazardWords.filter(word => textLower.includes(word));
+    const confidence = matched.length > 0 ? Math.min(0.99, 0.6 + matched.length * 0.08) : 0.0;
+    const severity = matched.length === 0 ? 1 : Math.min(5, 2 + matched.length);
     if (matched.length > 0) {
-      const confidence = 0.9 + Math.min(0.09, matched.length * 0.03);
       console.info(`[CISV NLP Heuristic] Hazard detected via keywords [${matched.join(', ')}] (Confidence: ${confidence.toFixed(2)})`);
-      this.plotDynamicIncidentMarker(gpsData.lat, gpsData.lon, rawText, peisLevel);
-    } else {
-      console.debug('[CISV NLP Heuristic] No hazardous patterns matched.');
+      if (severity >= 4) this.plotFieldAnomaly(gpsData.lat, gpsData.lon, 'FIELD_HAZARD');
+      else this.plotDynamicIncidentMarker(gpsData.lat, gpsData.lon, rawText, peisLevel);
     }
+    return {
+      source: 'Heuristic keyword triage (offline)',
+      category: matched.length > 0 ? 'hazard_report' : 'no_hazard',
+      severity,
+      confidence,
+      structuralDamage: matched.length > 0,
+      plotted: matched.length > 0,
+      matched,
+    };
   }
 
   /**
