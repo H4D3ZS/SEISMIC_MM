@@ -24,6 +24,8 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
+import { toMw } from './MagnitudeUtils.js';
+
 export const RECORD_SIZE = 7;
 
 // ── Philippine bounding box ───────────────────────────────────────────────────
@@ -118,18 +120,22 @@ export async function fetchUSGSEvents(opts = {}) {
   return (json.features ?? []).map(f => {
     const p    = f.properties;
     const [lon, lat, depth] = f.geometry.coordinates;
+    const rawMag = p.mag ?? 0;
+    const { mw } = toMw(rawMag, p.magType);   // homogenize to moment magnitude
     return {
-      id:     f.id,
-      lat:    lat,
-      lon:    lon,
-      depth:  depth  ?? 10,
-      mag:    p.mag  ?? 0,
-      time:   p.time ?? 0,
-      place:  p.place ?? '',
-      source: 'USGS',
-      strike: 0,
-      dip:    0,
-      rake:   0,
+      id:        f.id,
+      lat:       lat,
+      lon:       lon,
+      depth:     depth  ?? 10,
+      mag:       mw,                          // consistent Mw used downstream
+      magOriginal: rawMag,                    // original reported value
+      magType:   p.magType ?? null,           // mb / ms / mw / ml …
+      time:      p.time ?? 0,
+      place:     p.place ?? '',
+      source:    'USGS',
+      strike:    0,
+      dip:       0,
+      rake:      0,
     };
   });
 }
@@ -256,32 +262,37 @@ function _parsePhivolcsHTML(html) {
 function _parsePSTtoUTC(str) {
   if (!str) return 0;
 
-  // Try standard JS Date parse first (ISO format)
-  const d1 = new Date(str);
-  if (!isNaN(d1.getTime())) return d1.getTime();
-
-  // Handle PHIVOLCS format: "14 June 2026 - 04:58 PM"
+  // PHIVOLCS bulletin format FIRST (machine-timezone independent):
+  //   "15 June 2026 - 12:59 AM"  → Philippine Time (UTC+8)
+  // We must NOT rely on `new Date(str)` for this — it parses in the host's local
+  // timezone (or returns Invalid), which silently shifts the event by hours and
+  // is exactly what made events show up as "yesterday".
   const cleaned = str.replace(/\s*-\s*/g, ' ').trim();
-  const match = cleaned.match(/(\d{1,2})\s+(\w+)\s+(\d{4})\s+(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  const match = cleaned.match(/(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?/i);
   if (match) {
-    const months = { january:0, february:1, march:2, april:3, may:4, june:5, july:6, august:7, september:8, october:9, november:10, december:11 };
-    const day = parseInt(match[1]);
-    const month = months[match[2].toLowerCase()];
-    const year = parseInt(match[3]);
-    let hour = parseInt(match[4]);
-    const min = parseInt(match[5]);
-    const ampm = match[6].toUpperCase();
-    if (ampm === 'PM' && hour < 12) hour += 12;
-    if (ampm === 'AM' && hour === 12) hour = 0;
+    const months = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
+    const month = months[match[2].toLowerCase().slice(0, 3)];
     if (month !== undefined) {
-      const utcMs = Date.UTC(year, month, day, hour - 8, min); // PST = UTC+8
-      return utcMs;
+      const day = parseInt(match[1], 10);
+      const year = parseInt(match[3], 10);
+      let hour = parseInt(match[4], 10);
+      const min = parseInt(match[5], 10);
+      const sec = match[6] ? parseInt(match[6], 10) : 0;
+      const ampm = (match[7] || '').toUpperCase();
+      if (ampm === 'PM' && hour < 12) hour += 12;
+      if (ampm === 'AM' && hour === 12) hour = 0;
+      // Philippine Time (UTC+8) wall-clock → UTC. Date.UTC handles hour<0 rollover.
+      return Date.UTC(year, month, day, hour - 8, min, sec);
     }
   }
 
-  // Fallback: try Date.parse
-  const d2 = new Date(cleaned);
-  return isNaN(d2.getTime()) ? 0 : d2.getTime() - 8 * 3_600_000;
+  // ISO 8601 with explicit offset/Z is unambiguous — safe to use Date here.
+  if (/\d{4}-\d{2}-\d{2}T/.test(str)) {
+    const d = new Date(str);
+    if (!isNaN(d.getTime())) return d.getTime();
+  }
+
+  return 0;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -417,7 +428,9 @@ export async function fetchLiveCatalog(opts = {}) {
     `(USGS: ${usgsEvents.length}, PHIVOLCS: ${phivolcsEvents.length})`
   );
 
-  return { ...packEventsToBinary(merged), sources };
+  // Keep the raw, pre-merge arrays so callers can cross-verify the two networks
+  // (the merged catalog removes cross-source duplicates).
+  return { ...packEventsToBinary(merged), sources, rawUSGS: usgsEvents, rawPHIVOLCS: phivolcsEvents };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -473,12 +486,15 @@ export async function fetchHistoricalUSGSEvents(minMag = 4.5) {
   return (json.features ?? []).map(f => {
     const p    = f.properties;
     const [lon, lat, depth] = f.geometry.coordinates;
+    const { mw } = toMw(p.mag, p.magType);
     return {
       id:     f.id ? `usgs_${f.id}` : `usgs_${p.time}_${lat}_${lon}`,
       lat,
       lon,
       depth:  depth ?? 10,
-      mag:    p.mag,
+      mag:    mw,
+      magOriginal: p.mag,
+      magType: p.magType ?? null,
       time:   p.time,
       place:  p.place,
       source: 'USGS',

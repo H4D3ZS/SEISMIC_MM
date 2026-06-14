@@ -29,7 +29,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; img-src 'self' data: blob: https://*.tile.openstreetmap.org https://*.arcgisonline.com; connect-src 'self' https://earthquake.usgs.gov https://*.phivolcs.dost.gov.ph ipc: https://ipc.localhost; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:"
+      "csp": "default-src 'self'; img-src 'self' data: blob: https://*.tile.openstreetmap.org https://*.arcgisonline.com; connect-src 'self' https://earthquake.usgs.gov https://*.phivolcs.dost.gov.ph https://huggingface.co http://localhost:11434 http://127.0.0.1:11434 http://localhost:8081 http://127.0.0.1:8081 ipc: https://ipc.localhost; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:"
     },
     "bundle": {
       "active": true,

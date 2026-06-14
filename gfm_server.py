@@ -275,10 +275,13 @@ def health():
 if __name__ == '__main__':
     import socket
     import sys
-    port = 8080
+    # GFM serves on 8081. 8080 is deliberately NOT used — it commonly collides
+    # with other local services (databases, admin UIs, etc.). Honour GFM_PORT.
+    import os as _os
+    port = int(_os.environ.get('GFM_PORT', 8081))
     host = '127.0.0.1'
-    # Try alternative ports if 8080 is blocked
-    for p in [8080, 8081, 8082, 8090, 9080]:
+    # Try alternative ports if the preferred one is taken (8080 excluded).
+    for p in [port, 8081, 8082, 8090, 9080]:
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

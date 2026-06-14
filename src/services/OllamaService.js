@@ -47,7 +47,10 @@ export class OllamaService {
    * @returns {Promise<string>} Full response text
    */
   async predictSeismicRupture(hostUrl, modelName, promptText, onChunk) {
-    const response = await fetch(`${hostUrl}/api/generate`, {
+    // Use the Vite proxy in dev (bypasses browser CORS); direct host otherwise.
+    const isDev = window.location.port === '5173';
+    const base = isDev ? '/ollama-proxy' : hostUrl;
+    const response = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -58,7 +61,7 @@ export class OllamaService {
     });
 
     if (!response.ok) {
-      throw new Error(`Ollama generation status error: ${response.statusText}`);
+      throw new Error(`Ollama HTTP ${response.status} ${response.statusText} (model "${modelName}" — is it pulled? run: ollama list)`);
     }
 
     const reader = response.body.getReader();

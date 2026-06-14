@@ -21,7 +21,7 @@ import net from 'net';
 
 const __dirname = dirname(fileURLToPath(import.meta.url)).replace(/\\/g, '/');
 const VITE_PORT = 5173;
-const GFM_PORT = 8080;
+const GFM_PORT = 8081; // 8080 avoided — collides with common local services (DBs, admin UIs)
 const OLLAMA_PORT = 11434;
 
 const isWin = process.platform === 'win32';
@@ -145,6 +145,7 @@ async function main() {
     cwd: __dirname,
     stdio: ['ignore', 'pipe', 'pipe'],
     shell: false,
+    env: { ...process.env, GFM_PORT: String(GFM_PORT) }, // pin to 8081, never 8080
   });
   let gfmActualPort = GFM_PORT;
   gfmProc.stdout?.on('data', d => {

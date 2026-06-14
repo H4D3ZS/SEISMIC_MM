@@ -4,7 +4,7 @@ CISV — Offline Geophysical Foundation Model (GFM) Local Server
 ─────────────────────────────────────────────────────────────────────────────
 FastAPI-based offline model runner. Loads pre-trained weights of the
 gated GFM (thinkonward/geophysical-foundation-model) locally, runs inference
-on canvas image blobs or text data, and exposes endpoints on port 8080.
+on canvas image blobs or text data, and exposes endpoints on port 8081.
 
 All coordinates and coupling values are computed dynamically from input data.
 
@@ -154,7 +154,7 @@ async def health():
 def main():
     parser = argparse.ArgumentParser(description="GFM Offline Server")
     parser.add_argument("--weights", type=str, default=None)
-    parser.add_argument("--port", type=int, default=8080)
+    parser.add_argument("--port", type=int, default=8081)
     args = parser.parse_args()
 
     global model, MODEL_LOADED

@@ -27,6 +27,8 @@ export class CivicDashboard {
     this.barangayRenderer = barangayRenderer;
     this.gfmVisualizer = gfmVisualizer;
     this.bayesianPredictor = new BayesianPredictor();
+    this.catalogEvents = [];      // real events, fed via setCatalog()
+    this.catalogSources = [];
     this.activeCity = 'General Santos City';
     this.activeTab = 'overview';
     this.activeStatusField = 'hazard';
@@ -73,24 +75,36 @@ export class CivicDashboard {
       const progress = document.getElementById('bayesian-progress');
 
       bayesBtn.disabled = true;
-      bayesBtn.textContent = 'COMPUTING...';
+      bayesBtn.textContent = 'TRAINING...';
       terminal.style.display = 'block';
       progress.style.display = 'block';
+      terminal.textContent = 'Training Bayesian network on REAL earthquakes (live loss)...\n';
 
       try {
-        // Simulate progressive computation
-        for (let pct = 0; pct <= 100; pct += 5) {
-          progress.style.width = `${pct}%`;
-          terminal.textContent = `Running Bayesian inference... ${pct}%`;
-          await new Promise(r => setTimeout(r, 30));
-        }
+        // STEP 1 — REAL training: SGD on real events, live descending loss curve.
+        const train = await this.bayesianPredictor.trainOnData(this.catalogEvents, {
+          epochs: 80,
+          onProgress: (pct, loss, history) => {
+            if (progress) progress.style.width = `${Math.floor(pct * 0.6)}%`;
+            const spark = history.filter((_, i) => i % Math.max(1, Math.floor(history.length / 24)) === 0)
+              .map(l => '▁▂▃▄▅▆▇█'[Math.max(0, Math.min(7, Math.floor((1 - l / (history[0] || 1)) * 7)))]).join('');
+            terminal.textContent = `Training Bayesian NN on REAL data...\n` +
+              `  epoch loss: ${loss.toFixed(4)}\n  loss curve: ${spark}\n`;
+          },
+        });
+        bayesBtn.textContent = 'PREDICTING...';
+        terminal.textContent += train.ok
+          ? `\n✓ Trained on ${train.samples} real M≥5 events — loss ${train.initialLoss} → ${train.finalLoss} (${train.lossReduction}% reduction).\n`
+          : `\n⚠ ${train.reason} Using prior weights.\n`;
 
-        const result = this.bayesianPredictor.predict(lat, lon);
-        const report = this.bayesianPredictor.formatReport(result);
-        terminal.textContent = report;
+        // STEP 2 — REAL bootstrap posterior from the actual catalog.
+        const result = await this.bayesianPredictor.predictBootstrap(lat, lon, this.catalogEvents, {
+          onProgress: (pct) => { if (progress) progress.style.width = `${60 + Math.floor(pct * 0.4)}%`; },
+        });
+        if (progress) progress.style.width = '100%';
+        terminal.textContent += '\n' + this.bayesianPredictor.formatBootstrapReport(result, lat, lon);
 
-        // Update GFM attention
-        this.gfmVisualizer.setLinks(lat, lon, true);
+        if (result) this.gfmVisualizer.setLinks(lat, lon, true);
       } catch (err) {
         terminal.textContent = `ERROR: ${err.message}`;
       } finally {
@@ -101,6 +115,16 @@ export class CivicDashboard {
 
     // Initial render
     this._renderTab();
+  }
+
+  /**
+   * Feed the real catalog so the Bayesian bootstrap uses live data.
+   * @param {Array} events
+   * @param {string[]} [sources]
+   */
+  setCatalog(events, sources = []) {
+    this.catalogEvents = Array.isArray(events) ? events : [];
+    this.catalogSources = sources;
   }
 
   /**

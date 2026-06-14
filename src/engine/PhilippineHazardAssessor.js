@@ -79,6 +79,25 @@ const SEABED_ZONES = [
   { name: 'East Luzon Trench', lat: 17.8, lon: 123.5, couplingRatio: 0.85, strainRate: 25, upliftRisk: 'moderate', maxUplift_m: 0.8 },
 ];
 
+// ── CONFIRMED ground-truth observations (real, validated by agencies) ─────────
+// These are NOT predictions — they are documented post-event observations used
+// to validate the model's hazard forecasts against reality.
+export const CONFIRMED_OBSERVATIONS = [
+  {
+    type: 'seabed_uplift',
+    lat: 5.92, lon: 125.20, // Brgy. Pangyan, Glan, Sarangani
+    place: 'Brgy. Pangyan, Glan, Sarangani',
+    observedUplift_m: 2.0,
+    shorelineExtension_m: 200,
+    date: '2025-06-11',
+    causedBy: 'M7.8 Maasim, Sarangani (June 8, 2025)',
+    detail: 'Long stretches of shoreline, coral reef and seagrass beds exposed in '
+      + 'Pangyan Marine Sanctuary; corals dying off. Seabed rose ~2 m, shoreline '
+      + 'extended ~200 m.',
+    source: 'DENR SOCCSKSARGEN / PENRO Sarangani; PHIVOLCS (June 11, 2025)',
+  },
+];
+
 const VOLCANIC_ARCS = [
   { name: 'Matutum', lat: 6.35, lon: 125.17, type: 'stratovolcano', alertLevel: 0, lastEruption: 'Holocene' },
   { name: 'Parker', lat: 6.15, lon: 124.90, type: 'stratovolcano', alertLevel: 0, lastEruption: '1641' },
@@ -156,7 +175,7 @@ export class PhilippineHazardAssessor {
         criticalCount: affected.filter(z => z.potential === 'critical').length,
         highCount: affected.filter(z => z.potential === 'high').length,
         moderateCount: affected.filter(z => z.potential === 'moderate').length,
-        maxProbability: Math.max(...affected.map(z => z.probability)),
+        maxProbability: affected.length > 0 ? Math.max(...affected.map(z => z.probability)) : 0,
       },
       source: 'PHIVOLCS Liquefaction Hazard Maps + Torregosa et al. (2002)',
     };
@@ -266,6 +285,16 @@ export class PhilippineHazardAssessor {
     const tsunami = this.assessTsunamiRisk(lat, lon, magnitude, depth);
     const seabed = this.assessSeabedUplift(lat, lon, magnitude);
 
+    // Confirmed ground-truth observations within ~150 km — validates predictions.
+    const confirmedNearby = CONFIRMED_OBSERVATIONS
+      .map(o => ({ ...o, dist_km: Math.round(this.haversine(lat, lon, o.lat, o.lon)) }))
+      .filter(o => o.dist_km <= 150)
+      .sort((a, b) => a.dist_km - b.dist_km);
+    // If we predicted seabed uplift here AND it was observed, mark it validated.
+    if (confirmedNearby.some(o => o.type === 'seabed_uplift') && seabed.length > 0) {
+      seabed[0].validatedByObservation = confirmedNearby.find(o => o.type === 'seabed_uplift');
+    }
+
     const nearestVolcano = this.volcanicArcs
       .map(v => ({ ...v, dist: this.haversine(lat, lon, v.lat, v.lon) }))
       .sort((a, b) => a.dist - b.dist)[0];
@@ -277,6 +306,7 @@ export class PhilippineHazardAssessor {
       sinkholes,
       tsunami,
       seabedUplift: seabed,
+      confirmedObservations: confirmedNearby,
       nearestVolcano: nearestVolcano ? {
         name: nearestVolcano.name,
         dist_km: Math.round(nearestVolcano.dist),

@@ -1,0 +1,42 @@
+cff-version: 1.2.0
+message: >-
+  If you use this software or the seismic-hazard dataset derived from it,
+  please cite BOTH the primary research paper (Torregosa et al., 2002) and
+  the Geophysical Foundation Model (thinkonward, HuggingFace) listed below.
+title: "CISV — Philippine Seismic Hazard & Temporal Prediction Engine"
+type: software
+authors:
+  - name: "CISV Project"
+repository-code: "https://github.com/H4D3ZS/seismologicalgraph"
+license: MIT
+references:
+  # ── Primary scientific basis: all zone, fault, attenuation and
+  #    hazard-consistent parameters are extracted from this paper ──
+  - type: article
+    title: "Seismic Hazard and Microzoning of the Philippines"
+    authors:
+      - family-names: Torregosa
+        given-names: Ribelito F.
+      - family-names: Sugito
+        given-names: Masata
+      - family-names: Nojima
+        given-names: Nobuoto
+    year: 2002
+    journal: "Structural Engineering / Earthquake Engineering (JSCE)"
+    volume: "19"
+    issue: "2"
+    start: 79
+    end: 96
+    notes: "Vol. 19, No. 710/2002, pp. 79s-96s. Source of the 27 seismogenic
+      zones, active-fault parameters, attenuation Eqs. 17-19, and the
+      hazard-consistent ground-motion model used throughout this project."
+  # ── Geophysical Foundation Model (HuggingFace) used for GFM inference ──
+  - type: software
+    title: "Geophysical Foundation Model"
+    authors:
+      - name: "thinkonward"
+    year: 2024
+    url: "https://huggingface.co/thinkonward/geophysical-foundation-model"
+    doi: "10.57967/hf/2908"
+    notes: "McIntire et al. (2024), 'Geophysical Foundation Model: Improving
+      results with trace masking.' IMAGE Conference, Houston, Texas."

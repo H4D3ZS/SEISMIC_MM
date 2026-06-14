@@ -31,9 +31,14 @@ import {
   RECURRENCE_DATA,
   STRAIN_RATES,
   AFTERSHOCK_PARAMS,
+  bptHazard,
+  reasenbergJonesProb,
 } from '../data/ResearchPaperData.js';
 import { MonteCarloSimulator } from './MonteCarloSimulator.js';
 import { PredictionImprover } from './PredictionImprover.js';
+import { PhilippineHazardAssessor } from './PhilippineHazardAssessor.js';
+import { AftershockForecaster } from './AftershockForecaster.js';
+import { CoulombStressTransfer } from './CoulombStressTransfer.js';
 import { PLACE_LABELS } from '../data/PlaceLabelCatalog.js';
 
 // Mulberry32 PRNG
@@ -53,6 +58,9 @@ export class EarthquakePredictor {
     this.rng = mulberry32(0xDEADBEEF);
     this.improver = new PredictionImprover();
     this.simulator = new MonteCarloSimulator({ numSimulations: 100_000 });
+    this.hazardAssessor = new PhilippineHazardAssessor();
+    this.aftershockForecaster = new AftershockForecaster();
+    this.coulomb = new CoulombStressTransfer();
   }
 
   /**
@@ -64,7 +72,7 @@ export class EarthquakePredictor {
    * @param {Function} [params.onProgress]
    */
   async predict(params) {
-    const { lat, lon, depth = 25, onProgress } = params;
+    const { lat, lon, depth = 25, onProgress, recentEvents = [] } = params;
 
     // Phase 1: Find which seismogenic zone / fault is closest
     onProgress?.(5, 'Identifying seismogenic sources at target coordinates...');
@@ -89,16 +97,42 @@ export class EarthquakePredictor {
     onProgress?.(60, 'Running Bayesian temporal probability analysis...');
     const timing = this._bayesianTimingPrediction(recurrence, strain, aftershock);
 
-    // Phase 6: Monte Carlo validation (100K fast sims)
-    onProgress?.(75, 'Validating with Monte Carlo simulation (100K)...');
-    const mcSim = new MonteCarloSimulator({ numSimulations: 100_000 });
-    const mcResult = await mcSim.runSimulation({ lat, lon, depth });
+    // Phase 6: Monte Carlo validation (uses the simulator the UI configured —
+    // e.g. 5M Ultra-Precision). Progress is forwarded so the bar moves during
+    // the heavy run instead of appearing frozen.
+    const nSims = this.simulator.numSimulations;
+    onProgress?.(75, `Validating with Monte Carlo PSHA (${nSims.toLocaleString()} sims)...`);
+    const mcResult = await this.simulator.runSimulation({
+      lat, lon, depth,
+      progressCb: (pct, msg) => onProgress?.(75 + Math.floor(pct * 0.15), msg),
+    });
+
+    // Phase 6a: Live-conditioned aftershock forecast + Coulomb stress transfer.
+    onProgress?.(84, 'Fitting aftershock decay to live data + Coulomb transfer...');
+    const aftershockForecast = this.aftershockForecaster.forecast({
+      recentEvents, roi: { lat, lon }, horizonDays: 30,
+    });
+    const coulombResult = this.coulomb.compute({
+      lat: aftershockForecast.mainshock.lat,
+      lon: aftershockForecast.mainshock.lon,
+      mag: aftershockForecast.mainshock.mag,
+      strike: nearestFault?.strike ?? 345,
+    });
+
+    // Phase 6b: Multi-hazard cascade (liquefaction / sinkhole / tsunami / seabed
+    // uplift) driven by the hazard-consistent magnitude from the MC-PSHA run.
+    onProgress?.(88, 'Assessing secondary hazards (liquefaction, sinkhole, tsunami)...');
+    const scenarioMag = Math.max(
+      mcResult.summary.hazardConsistentMag || 0,
+      nearestZone?.maxMag ? nearestZone.maxMag * 0.85 : 6.5
+    );
+    const multiHazard = this.hazardAssessor.assessFullHazard(lat, lon, scenarioMag, depth);
 
     // Phase 7: Gemma 4 12B narrative
     let gemmaReport = null;
     try {
       onProgress?.(90, 'Querying Gemma 4 12B for temporal analysis...');
-      gemmaReport = await this._queryGemma4(recurrence, strain, aftershock, timing, lat, lon);
+      gemmaReport = await this._queryGemma4(recurrence, strain, aftershock, timing, lat, lon, aftershockForecast, coulombResult);
     } catch (err) {
       console.warn('[EarthquakePredictor] Gemma 4 query failed:', err.message);
     }
@@ -110,6 +144,9 @@ export class EarthquakePredictor {
       aftershock,
       timing,
       mcResult,
+      multiHazard,
+      aftershockForecast,
+      coulomb: coulombResult,
       gemmaReport,
       nearestZone,
       nearestFault,
@@ -124,6 +161,213 @@ export class EarthquakePredictor {
     onProgress?.(100, 'Prediction complete.');
 
     return calibrated;
+  }
+
+  /**
+   * Big-One scenario forecast — narrow WHEN/WHERE for a specific target magnitude
+   * (default M8.3). Combines three conditionally-independent signals:
+   *   1. Time-dependent renewal (BPT) hazard — overdue ⇒ rising near-term prob
+   *   2. Aftershock-triggered larger event (Reasenberg-Jones + ETAS branching)
+   *   3. Coulomb-loaded segment proximity (which segment is closest to failure)
+   *
+   * Returns a narrowed window, conditional probability, the most-likely segment,
+   * and the expected secondary-hazard cascade. PROBABILISTIC — not a date.
+   *
+   * @param {object} params { lat, lon, depth, targetMag=8.3, recentEvents, onProgress }
+   */
+  async predictScenario(params) {
+    const { lat, lon, depth = 25, targetMag = 8.3, recentEvents = [], onProgress } = params;
+
+    onProgress?.(10, `Locating sources & loaded segments for an M${targetMag} scenario...`);
+    const zones = this._findNearbyZones(lat, lon);
+    const nearestZone = zones[0] || null;
+    const nearestFault = this._findNearestFault(lat, lon);
+
+    const recurrence = this._computeRecurrenceAnalysis(lat, lon, nearestZone, nearestFault);
+    const strain = this._computeStrainAccumulation(lat, lon, nearestFault);
+
+    onProgress?.(35, 'Fitting live aftershock sequence (Omori-Utsu)...');
+    const aftershockForecast = this.aftershockForecaster.forecast({
+      recentEvents, roi: { lat, lon }, horizonDays: 30,
+    });
+    const mainshock = aftershockForecast.mainshock;
+
+    onProgress?.(55, 'Computing Coulomb stress transfer onto neighbour segments...');
+    const coulombResult = this.coulomb.compute({
+      lat: mainshock.lat, lon: mainshock.lon, mag: mainshock.mag,
+      strike: nearestFault?.strike ?? 345,
+    });
+    const topSegment = coulombResult.topSegment;
+
+    onProgress?.(70, 'Combining renewal + aftershock-trigger + Coulomb hazards...');
+
+    // ── Signal 1: time-dependent renewal (BPT) over multiple windows ──────────
+    const meanInterval = parseFloat(recurrence.avgInterval) || 50;
+    const elapsed = parseFloat(recurrence.yearsSinceLast) || 0;
+    const windows = [
+      { label: 'IMMINENT (0-1 yr)', years: 1 },
+      { label: 'SHORT (1-5 yr)',    years: 5,  offset: 1 },
+      { label: 'MEDIUM (5-15 yr)',  years: 15, offset: 5 },
+      { label: 'LONG (15-30 yr)',   years: 30, offset: 15 },
+    ];
+
+    // ── Signal 2: aftershock-triggered M≥targetMag in next 30 days ────────────
+    const t1 = aftershockForecast.daysSinceMainshock;
+    const rjOmori = { p: aftershockForecast.omori.p, c: aftershockForecast.omori.c, b: aftershockForecast.bValue };
+    const triggerProb30d = reasenbergJonesProb(
+      mainshock.mag, targetMag, t1, t1 + 30, rjOmori
+    ).probAtLeastOne;
+
+    // ── Calendar window: probability within the REST OF the mainshock's month ──
+    // (e.g. "rest of June 2026"). This is the headline answer — a date-bounded
+    // probability for the ongoing sequence, not a multi-year window.
+    const now = Date.now();
+    const msDate = new Date(mainshock.time);
+    const endOfMonth = Date.UTC(msDate.getUTCFullYear(), msDate.getUTCMonth() + 1, 0, 23, 59, 59);
+    const monthName = new Date(endOfMonth).toLocaleString('en-US', { month: 'long', timeZone: 'UTC' });
+    const daysToEndMonth = Math.max(0, (endOfMonth - now) / 86400000);
+    const monthClosed = daysToEndMonth <= 0;
+    const rjMonth = (m) => reasenbergJonesProb(mainshock.mag, m, t1, t1 + daysToEndMonth, rjOmori);
+    const monthWindow = {
+      label: `Rest of ${monthName} ${msDate.getUTCFullYear()}`,
+      daysRemaining: parseFloat(daysToEndMonth.toFixed(1)),
+      closed: monthClosed,
+      pTarget: monthClosed ? 0 : parseFloat((rjMonth(targetMag).probAtLeastOne * 100).toFixed(2)),
+      pM5: monthClosed ? 0 : parseFloat((rjMonth(5).probAtLeastOne * 100).toFixed(0)),
+      pM6: monthClosed ? 0 : parseFloat((rjMonth(6).probAtLeastOne * 100).toFixed(0)),
+      pM7: monthClosed ? 0 : parseFloat((rjMonth(7).probAtLeastOne * 100).toFixed(1)),
+      expectedTargetCount: monthClosed ? 0 : parseFloat(rjMonth(targetMag).expectedCount.toFixed(4)),
+    };
+    // Branching amplifies the near-term cascade weight.
+    const cascadeWeight = Math.min(0.6, triggerProb30d * (0.5 + aftershockForecast.branchingRatio));
+
+    // ── Signal 3: Coulomb loading boost for the near-term window ──────────────
+    const coulombBoost = topSegment && topSegment.loaded
+      ? Math.min(0.4, topSegment.deltaCFF_bar * 0.5)  // bar → near-term boost
+      : 0;
+
+    const timingWindows = windows.map(w => {
+      const startElapsed = elapsed + (w.offset || 0);
+      const winLen = w.years - (w.offset || 0);
+      const pRenewal = bptHazard(startElapsed, winLen, meanInterval, 0.5);
+      // Aftershock + Coulomb only elevate the nearest windows.
+      const nearWeight = (w.offset || 0) === 0 ? 1.0 : (w.offset <= 1 ? 0.4 : 0.0);
+      const pCombined = 1 - (1 - pRenewal)
+        * (1 - cascadeWeight * nearWeight)
+        * (1 - coulombBoost * nearWeight);
+      return {
+        window: w.label,
+        probability: parseFloat((pCombined * 100).toFixed(1)),
+        renewalPct: parseFloat((pRenewal * 100).toFixed(1)),
+        confidence: pCombined > 0.4 ? 'HIGH' : pCombined > 0.15 ? 'MODERATE' : 'LOW',
+      };
+    });
+    const mostProbable = timingWindows.reduce((b, w) => w.probability > b.probability ? w : b, timingWindows[0]);
+
+    onProgress?.(85, 'Assessing M' + targetMag + ' cascade (tsunami / liquefaction / sinkhole)...');
+    const cascade = this.hazardAssessor.assessFullHazard(
+      topSegment ? topSegment.lat : lat,
+      topSegment ? topSegment.lon : lon,
+      targetMag, depth
+    );
+
+    onProgress?.(100, 'Scenario forecast complete.');
+
+    return {
+      type: 'SCENARIO',
+      targetMag,
+      mainshock,
+      recurrence,
+      strain,
+      aftershockForecast,
+      coulomb: coulombResult,
+      mostLikelySegment: topSegment,
+      monthWindow,
+      timingWindows,
+      mostProbable,
+      triggerProb30d: parseFloat((triggerProb30d * 100).toFixed(2)),
+      cascade,
+      citation: PAPER_CITATION,
+      disclaimer: 'PROBABILISTIC narrowing — not a deterministic date. Combines BPT '
+        + 'renewal, Reasenberg-Jones aftershock triggering, and empirical Coulomb transfer.',
+      timestamp: Date.now(),
+      meta: { lat, lon, depth },
+    };
+  }
+
+  /**
+   * Format the Big-One scenario forecast as a text report.
+   */
+  formatScenarioReport(r) {
+    const seg = r.mostLikelySegment;
+    const af = r.aftershockForecast;
+    let out = `[CISV BIG-ONE SCENARIO FORECAST — M${r.targetMag}]
+═══════════════════════════════════════════
+⚠ ${r.disclaimer}
+
+ANCHOR MAINSHOCK: M${af.mainshock.mag} ${af.mainshock.place || ''} (${af.mainshock.source})
+  Days since: ${af.daysSinceMainshock.toFixed(1)} | Aftershock phase: ${af.phase}
+  Observed aftershocks (M≥${af.magnitudeOfCompleteness}): ${af.observedAftershocks} ${af.omori.fitted ? '(Omori fit to live data)' : '(generic params — sparse live data)'}
+`;
+    const mw = r.monthWindow;
+    if (mw) {
+      out += `
+╔═══════════════════════════════════════════╗
+║ HEADLINE — ${mw.label.toUpperCase()} (${mw.daysRemaining}d left)${' '.repeat(Math.max(0, 13 - String(mw.daysRemaining).length))}║
+╚═══════════════════════════════════════════╝`;
+      if (mw.closed) {
+        out += `
+  Window closed — mainshock month already ended.`;
+      } else {
+        out += `
+  P(M≥${r.targetMag} "Big One" this month): ${mw.pTarget}%  (expected count ${mw.expectedTargetCount})
+  P(M≥5): ${mw.pM5}%  |  P(M≥6): ${mw.pM6}%  |  P(M≥7): ${mw.pM7}%
+  → Most likely outcome this month: continued M5-6 aftershocks; a new M≥${r.targetMag}
+    mainshock in-month is ${mw.pTarget < 5 ? 'LOW-probability but non-zero' : mw.pTarget < 20 ? 'ELEVATED' : 'HIGH'} (aftershock-triggering).`;
+      }
+    }
+    out += `
+
+WHEN — longer-horizon windows (M≈${r.targetMag}):`;
+    for (const w of r.timingWindows) {
+      const bar = '█'.repeat(Math.round(w.probability / 5)) + '░'.repeat(20 - Math.round(w.probability / 5));
+      out += `
+  ${w.window.padEnd(18)} ${bar} ${w.probability.toFixed(1)}% (${w.confidence}) [renewal ${w.renewalPct}%]`;
+    }
+    out += `
+  MOST PROBABLE: ${r.mostProbable.window} — ${r.mostProbable.probability}%
+  Aftershock-triggered M≥${r.targetMag} in next 30 days: ${r.triggerProb30d}%
+
+WHERE — most-loaded segment (Coulomb ΔCFF):`;
+    if (seg) {
+      out += `
+  → ${seg.name} (zone ${seg.id}): ΔCFF +${seg.deltaCFF_bar} bar, ${seg.distanceKm} km, clock advanced ~${seg.clockAdvanceYears} yr
+     ${seg.status} | zone max M${seg.maxMag}`;
+      for (const s of r.coulomb.rangedSegments.slice(1, 4)) {
+        out += `
+  · ${s.name}: +${s.deltaCFF_bar} bar (${s.distanceKm} km) — ${s.status}`;
+      }
+    }
+    out += `
+
+CASCADE if M${r.targetMag} ruptures near ${seg ? seg.name : 'target'}:
+  Overall: ${r.cascade.overallRisk.level} — ${r.cascade.overallRisk.action}
+  Tsunami: ${r.cascade.tsunami.tsunamiTriggered ? '⚠ TRIGGERED' : 'not triggered'}${r.cascade.tsunami.coastalSegments[0] ? ` (max runup ${r.cascade.tsunami.coastalSegments[0].estimatedRunup_m}m @ ${r.cascade.tsunami.coastalSegments[0].name})` : ''}
+  Liquefaction: ${r.cascade.liquefaction.summary.criticalCount} critical / ${r.cascade.liquefaction.summary.highCount} high zones
+  Sinkhole: ${r.cascade.sinkholes.length} karst zones at risk${(r.cascade.confirmedObservations && r.cascade.confirmedObservations.length) ? r.cascade.confirmedObservations.map(o => `
+  ✓ VALIDATED: ${o.type.replace('_', ' ')} CONFIRMED @ ${o.place} (${o.dist_km}km) — ${o.observedUplift_m ? o.observedUplift_m + 'm uplift, ' + o.shorelineExtension_m + 'm shoreline, ' : ''}${o.date}. [${o.source}]`).join('') : ''}
+
+AFTERSHOCK OUTLOOK (next 30 days):
+  P(M≥6): ${(af.prob30d.m6 * 100).toFixed(0)}% | P(M≥7): ${(af.prob30d.m7 * 100).toFixed(0)}%
+  Largest expected aftershock: M${af.largestExpectedAftershock.toFixed(1)} (${(af.largestProb30d * 100).toFixed(0)}% in 30d)
+  Cascade potential (ETAS n=${af.branchingRatio.toFixed(2)}): ${af.cascadeRisk}
+  Sequence calms ~${af.calmsDate}
+
+═══════════════════════════════════════════
+CITATION: ${r.citation.authors.join(', ')} (${r.citation.year}). "${r.citation.title}"
+  ${r.citation.journal}, Vol. ${r.citation.volume}, No. ${r.citation.number}.
+═══════════════════════════════════════════`;
+    return out;
   }
 
   // ── Source Identification ───────────────────────────────────────────────
@@ -174,11 +418,11 @@ export class EarthquakePredictor {
     }
 
     // Historical events in this zone
-    const historicalInZone = PAPER_HISTICAL_EVENTS.filter(ev => {
+    const historicalInZone = PAPER_HISTORICAL_EVENTS.filter(ev => {
       if (!nearestZone) return false;
       const dist = this._haversine(lat, lon, ev.lat, ev.lon);
       return dist < 200;
-    }).sort((a, b) => new Date(a.year, a.month - 1, a.day) - new Date(b.year, a.month - 1, a.day));
+    }).sort((a, b) => new Date(a.year, a.month - 1, a.day) - new Date(b.year, b.month - 1, b.day));
 
     // Compute inter-event times
     const interEventTimes = [];
@@ -513,7 +757,27 @@ export class EarthquakePredictor {
 
   // ── Gemma 4 12B Query ──────────────────────────────────────────────────
 
-  async _queryGemma4(recurrence, strain, aftershock, timing, lat, lon) {
+  async _queryGemma4(recurrence, strain, aftershock, timing, lat, lon, aftershockForecast = null, coulomb = null) {
+    let liveBlock = '';
+    if (aftershockForecast) {
+      const af = aftershockForecast;
+      liveBlock += `
+
+LIVE AFTERSHOCK SEQUENCE (fit to real data):
+- Anchor mainshock: M${af.mainshock.mag} ${af.mainshock.place || ''} (${af.daysSinceMainshock.toFixed(1)} days ago, ${af.phase} phase)
+- Observed aftershocks: ${af.observedAftershocks}${af.omori.fitted ? ` (Omori p=${af.omori.p.toFixed(2)})` : ' (sparse)'}
+- Next 30d: P(M≥6)=${(af.prob30d.m6 * 100).toFixed(0)}%, P(M≥7)=${(af.prob30d.m7 * 100).toFixed(0)}%
+- Largest expected aftershock: M${af.largestExpectedAftershock.toFixed(1)}
+- ETAS branching n=${af.branchingRatio.toFixed(2)} (${af.cascadeRisk}); sequence calms ~${af.calmsDate}`;
+    }
+    if (coulomb && coulomb.topSegment) {
+      liveBlock += `
+
+COULOMB STRESS TRANSFER (where stress moved):
+- Most-loaded segment: ${coulomb.topSegment.name} (+${coulomb.topSegment.deltaCFF_bar} bar, ${coulomb.topSegment.distanceKm} km, clock advanced ~${coulomb.topSegment.clockAdvanceYears} yr)
+- ${coulomb.triggeredCount} segment(s) brought toward failure`;
+    }
+
     const prompt = `You are a seismologist at a NASA earthquake prediction center. The Torregosa et al. (2002) paper "Seismic Hazard and Microzoning of the Philippines" successfully predicted the M7.8 earthquake that struck Maasim, Sarangani on June 8, 2026. Use this validated methodology to answer: WHEN will the next significant earthquake occur?
 
 TARGET LOCATION: ${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E
@@ -545,6 +809,7 @@ TIMING PREDICTIONS:
 ${timing.timingWindows.map(w => `- ${w.window}: ${(w.probability).toFixed(1)}% probability (${w.confidence} confidence)`).join('\n')}
 - Most probable window: ${timing.mostProbable.window} (${timing.mostProbable.probability.toFixed(1)}%)
 - Date estimate: ${timing.dateEstimate.mostLikely} (range: ${timing.dateEstimate.earliest} to ${timing.dateEstimate.latest})
+${liveBlock}
 
 Answer with SPECIFIC DATES and timeframes. The question is WHEN. Be precise. Reference the validated June 8, 2026 prediction as proof of methodology.`;
 
@@ -641,6 +906,99 @@ CALIBRATION STATUS:
   Magnitude correction: ${cal.factors.magnitudeCorrection > 0 ? '+' : ''}${cal.factors.magnitudeCorrection.toFixed(2)}
   Timing correction: ${cal.factors.timingCorrectionYears > 0 ? '+' : ''}${cal.factors.timingCorrectionYears.toFixed(1)} years
   CI width multiplier: ${cal.factors.ciWidthMultiplier}x`;
+    }
+
+    // Secondary / cascading hazards
+    if (result.multiHazard) {
+      const h = result.multiHazard;
+      report += `
+
+═══════════════════════════════════════════
+SECONDARY HAZARD CASCADE (scenario M${h.epicenter.magnitude.toFixed(1)}):
+═══════════════════════════════════════════
+  OVERALL: ${h.overallRisk.level} — ${h.overallRisk.action}`;
+
+      // Liquefaction
+      const liq = h.liquefaction;
+      report += `
+
+  LIQUEFACTION (MMI ${liq.shakingIntensity}):
+    Critical zones: ${liq.summary.criticalCount} | High: ${liq.summary.highCount} | Moderate: ${liq.summary.moderateCount}
+    Peak probability: ${(liq.summary.maxProbability * 100).toFixed(0)}%`;
+      for (const z of liq.affectedZones.slice(0, 4)) {
+        report += `
+    • ${z.name}, ${z.city} (${z.dist_km}km) — ${z.potential.toUpperCase()} ${(z.probability * 100).toFixed(0)}% [${z.soilType}, WT ${z.waterTable}m]`;
+      }
+
+      // Sinkholes
+      if (h.sinkholes.length > 0) {
+        report += `
+
+  SINKHOLE (limestone karst):`;
+        for (const s of h.sinkholes.slice(0, 3)) {
+          report += `
+    • ${s.name} (${s.dist_km}km) — ${s.risk.toUpperCase()} ${(s.probability * 100).toFixed(0)}% — ${s.recommendation}`;
+        }
+      }
+
+      // Tsunami
+      const tsu = h.tsunami;
+      report += `
+
+  TSUNAMI: ${tsu.tsunamiTriggered ? '⚠ TRIGGERED (shallow offshore subduction)' : 'not triggered'}`;
+      for (const c of tsu.coastalSegments.slice(0, 4)) {
+        report += `
+    • ${c.name} (${c.dist_km}km) — runup ${c.estimatedRunup_m}m — ${c.warning}`;
+      }
+
+      // Seabed uplift
+      if (h.seabedUplift.length > 0) {
+        report += `
+
+  SEABED UPLIFT/SUBSIDENCE:`;
+        for (const u of h.seabedUplift.slice(0, 2)) {
+          report += `
+    • ${u.name} (${u.dist_km}km) — ${u.estimatedUplift_m}m uplift (${(u.upliftProbability * 100).toFixed(0)}%) — ${u.impact}`;
+        }
+      }
+
+      if (h.nearestVolcano) {
+        report += `
+
+  NEAREST VOLCANO: ${h.nearestVolcano.name} (${h.nearestVolcano.dist_km}km, ${h.nearestVolcano.type}) — ${h.nearestVolcano.volcanicThreat}`;
+      }
+      report += `
+    Source: ${h.source}`;
+    }
+
+    // Live aftershock forecast + Coulomb stress transfer (narrowing block)
+    if (result.aftershockForecast) {
+      const af = result.aftershockForecast;
+      report += `
+
+═══════════════════════════════════════════
+LIVE AFTERSHOCK FORECAST (narrowing WHEN):
+═══════════════════════════════════════════
+  Anchor mainshock: M${af.mainshock.mag} ${af.mainshock.place || ''} (${af.mainshock.source}), ${af.daysSinceMainshock.toFixed(1)}d ago — ${af.phase} phase
+  Observed aftershocks (M≥${af.magnitudeOfCompleteness}): ${af.observedAftershocks} ${af.omori.fitted ? `→ Omori p=${af.omori.p.toFixed(2)}, c=${af.omori.c.toFixed(2)} (fit to live data)` : '(too few — generic params)'}
+  Next 7d:  P(M≥5) ${(af.prob7d.m5 * 100).toFixed(0)}% | P(M≥6) ${(af.prob7d.m6 * 100).toFixed(0)}% | P(M≥7) ${(af.prob7d.m7 * 100).toFixed(0)}%
+  Next 30d: P(M≥5) ${(af.prob30d.m5 * 100).toFixed(0)}% | P(M≥6) ${(af.prob30d.m6 * 100).toFixed(0)}% | P(M≥7) ${(af.prob30d.m7 * 100).toFixed(0)}%
+  Largest expected aftershock: M${af.largestExpectedAftershock.toFixed(1)} (${(af.largestProb30d * 100).toFixed(0)}% within 30d)
+  Cascade potential (ETAS n=${af.branchingRatio.toFixed(2)}): ${af.cascadeRisk}
+  Sequence calms ~${af.calmsDate}`;
+    }
+    if (result.coulomb) {
+      const c = result.coulomb;
+      report += `
+
+COULOMB STRESS TRANSFER (narrowing WHERE):
+  ${c.triggeredCount} segment(s) loaded ≥ ${c.triggerThresholdBar} bar by the M${c.source.mag} rupture (L≈${c.source.ruptureLengthKm}km)`;
+      for (const s of c.rangedSegments.slice(0, 4)) {
+        report += `
+  ${s.deltaCFF_bar >= c.triggerThresholdBar ? '→' : '·'} ${s.name.padEnd(20)} +${s.deltaCFF_bar} bar (${s.distanceKm}km) clock+${s.clockAdvanceYears}yr — ${s.status}`;
+      }
+      report += `
+  Method: ${c.method}`;
     }
 
     if (result.gemmaReport) {

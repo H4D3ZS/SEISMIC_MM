@@ -466,18 +466,21 @@ export class UIController {
   }
 
   _bindAIModel() {
-    const btn = document.getElementById('ai-train-btn');
-    const statusVal = document.getElementById('ai-model-status');
-    const loadVal = document.getElementById('ai-coulomb-load');
-    const locVal = document.getElementById('ai-predicted-loc');
-    const terminal = document.getElementById('gfm-terminal');
-    if (!btn) return;
-
     // Prefill the Hugging Face token if defined in .env
     const hfTokenInput = document.getElementById('hf-token');
     if (hfTokenInput && import.meta.env.VITE_HF_TOKEN) {
       hfTokenInput.value = import.meta.env.VITE_HF_TOKEN;
     }
+
+    // NOTE: the #ai-train-btn click is bound in main.js, where it runs the REAL
+    // HistoricalSeismicityAnalyzer (then optional GFM inference). This legacy
+    // duplicate binding is disabled to prevent a double-fire / clobbered terminal.
+    const btn = document.getElementById('ai-train-btn-disabled-legacy');
+    const statusVal = document.getElementById('ai-model-status');
+    const loadVal = document.getElementById('ai-coulomb-load');
+    const locVal = document.getElementById('ai-predicted-loc');
+    const terminal = document.getElementById('gfm-terminal');
+    if (!btn) return;
 
     btn.addEventListener('click', async () => {
       const endpoint = document.getElementById('gfm-endpoint')?.value || 'http://localhost:8081/predictions/geophysical_foundation_model';
@@ -869,8 +872,28 @@ COORDINATES: lat, lon`;
       terminal.textContent = '';
       
       const host = hostInput.value.trim();
-      const model = modelSelect.value;
+      let model = modelSelect.value;
       const isMock = mockCheckbox.checked;
+
+      // Real Ollama path: make sure a model is actually selected. If not, query
+      // the running Ollama for its installed models and use the first one.
+      if (!isMock && (!model || model === '')) {
+        terminal.textContent += `[Ollama] No model selected — querying ${host} for installed models...\n`;
+        try {
+          const models = await this._ollama.listModels(host);
+          if (models.length === 0) throw new Error('No models installed. Run e.g. `ollama pull gemma2:9b`.');
+          model = models[0];
+          modelSelect.innerHTML = models.map(m => `<option value="${m}"${m === model ? ' selected' : ''}>${m}</option>`).join('');
+          terminal.textContent += `[Ollama] Using model: ${model}\n`;
+        } catch (e) {
+          terminal.textContent += `[ERROR] Cannot reach Ollama at ${host}: ${e.message}\n` +
+            `Start it with: OLLAMA_ORIGINS="*" ollama serve\n`;
+          analyzeBtn.disabled = false;
+          analyzeBtn.textContent = 'RUN LLM SEISMIC ANALYSIS';
+          return;
+        }
+      }
+      if (!isMock) terminal.textContent += `[Ollama] Streaming from ${model} (real inference)…\n\n`;
 
       // 1. Gather context from recent earthquakes (first 5)
       const earthquakesContext = this._liveEvents.slice(0, 5).map(e => {
@@ -1899,31 +1922,37 @@ Instructions:
 
 // ── Date formatting helpers ───────────────────────────────────────────────────
 
+// Philippine Standard Time = UTC+8. Event times are displayed in PHT so they
+// match the PHIVOLCS bulletin exactly (PHIVOLCS lists everything in PHT). Adding
+// 8h to the UTC ms and then reading getUTC* parts yields the PHT wall clock
+// regardless of the viewer's machine timezone.
+const PHT_OFFSET_MS = 8 * 3_600_000;
+
 /**
- * Short UTC time for the feed list: "12 Jun 1995, 05:37 UTC"
- * @param {number} ms Unix ms
+ * Short Philippine-time for the feed list: "15 Jun 2026, 00:59 PHT"
+ * @param {number} ms Unix ms (UTC)
  */
 function _formatUTCShort(ms) {
-  const d   = new Date(ms);
+  const d   = new Date(ms + PHT_OFFSET_MS);
   const day = String(d.getUTCDate()).padStart(2, '0');
   const mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()];
   const yr  = d.getUTCFullYear();
   const hh  = String(d.getUTCHours()).padStart(2, '0');
   const mm  = String(d.getUTCMinutes()).padStart(2, '0');
-  return `${day} ${mon} ${yr}, ${hh}:${mm} UTC`;
+  return `${day} ${mon} ${yr}, ${hh}:${mm} PHT`;
 }
 
 /**
- * Full UTC timestamp for the telemetry panel: "2026-06-12 05:37:44 UTC"
- * @param {number} ms Unix ms
+ * Full Philippine-time stamp for the telemetry panel: "2026-06-15 00:59:44 PHT"
+ * @param {number} ms Unix ms (UTC)
  */
 function _formatUTCFull(ms) {
-  const d   = new Date(ms);
+  const d   = new Date(ms + PHT_OFFSET_MS);
   const yr  = d.getUTCFullYear();
   const mo  = String(d.getUTCMonth() + 1).padStart(2, '0');
   const dy  = String(d.getUTCDate()).padStart(2, '0');
   const hh  = String(d.getUTCHours()).padStart(2, '0');
   const mm  = String(d.getUTCMinutes()).padStart(2, '0');
   const ss  = String(d.getUTCSeconds()).padStart(2, '0');
-  return `${yr}-${mo}-${dy} ${hh}:${mm}:${ss} UTC`;
+  return `${yr}-${mo}-${dy} ${hh}:${mm}:${ss} PHT`;
 }
