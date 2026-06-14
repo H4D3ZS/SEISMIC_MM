@@ -140,36 +140,42 @@ export async function fetchUSGSEvents(opts = {}) {
 
 /**
  * Fetch and parse the PHIVOLCS earthquake bulletin HTML page.
+ * Tries the monthly bulletin first, then falls back to the main page.
  * Returns an empty array gracefully if the proxy is unavailable.
- *
- * HTML table column order (as of 2025–2026):
- *   0: Date-Time (PST)
- *   1: Latitude (°N)
- *   2: Longitude (°E)
- *   3: Depth (km)
- *   4: Magnitude
- *   5: Location description
  *
  * @returns {Promise<LiveEvent[]>}
  */
 export async function fetchPhivolcsEvents() {
-  try {
-    const res = await fetchWithTimeout(PHIVOLCS_PROXY, {
-      cache:   'no-store',
-      headers: { 'Accept': 'text/html,application/xhtml+xml' },
-    });
+  const now = new Date();
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const year = now.getFullYear();
+  const monthName = months[now.getMonth()];
 
-    if (!res.ok) {
-      console.warn(`[PhivolcsDataService] Proxy returned HTTP ${res.status} — skipping PHIVOLCS scrape.`);
-      return [];
+  const urls = [
+    `${PHIVOLCS_PROXY}2026_Earthquake_Information/${monthName}/`,
+    `${PHIVOLCS_PROXY}Earthquake_Information/`,
+    PHIVOLCS_PROXY,
+  ];
+
+  for (const url of urls) {
+    try {
+      const res = await fetchWithTimeout(url, {
+        cache:   'no-store',
+        headers: { 'Accept': 'text/html,application/xhtml+xml' },
+      });
+      if (!res.ok) continue;
+      const html = await res.text();
+      const events = _parsePhivolcsHTML(html);
+      if (events.length > 0) {
+        console.info(`[PhivolcsDataService] Fetched ${events.length} events from PHIVOLCS (${url})`);
+        return events;
+      }
+    } catch {
+      continue;
     }
-
-    const html = await res.text();
-    return _parsePhivolcsHTML(html);
-  } catch (err) {
-    console.warn('[PhivolcsDataService] PHIVOLCS fetch failed (non-critical):', err.message);
-    return [];
   }
+  console.warn('[PhivolcsDataService] All PHIVOLCS endpoints failed.');
+  return [];
 }
 
 /**
@@ -238,7 +244,10 @@ function _parsePhivolcsHTML(html) {
 
 /**
  * Parse a PHIVOLCS date-time string (PST) to UTC Unix milliseconds.
- * Handles format: "12 June 2026 - 05:37 PM"
+ * Handles formats:
+ *   "12 June 2026 - 05:37 PM"
+ *   "14 June 2026 - 04:58 PM"
+ *   "2026-06-14T05:37:00"
  *
  * @param {string} str
  * @returns {number} Unix ms UTC, or 0 on parse failure
@@ -246,12 +255,33 @@ function _parsePhivolcsHTML(html) {
  */
 function _parsePSTtoUTC(str) {
   if (!str) return 0;
-  // Remove the dash separator and normalize
-  const cleaned = str.replace(' - ', ' ').trim();
-  const d = new Date(cleaned);
-  if (isNaN(d.getTime())) return 0;
-  // PST = UTC+8 → subtract 8 hours to get UTC
-  return d.getTime() - 8 * 3_600_000;
+
+  // Try standard JS Date parse first (ISO format)
+  const d1 = new Date(str);
+  if (!isNaN(d1.getTime())) return d1.getTime();
+
+  // Handle PHIVOLCS format: "14 June 2026 - 04:58 PM"
+  const cleaned = str.replace(/\s*-\s*/g, ' ').trim();
+  const match = cleaned.match(/(\d{1,2})\s+(\w+)\s+(\d{4})\s+(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  if (match) {
+    const months = { january:0, february:1, march:2, april:3, may:4, june:5, july:6, august:7, september:8, october:9, november:10, december:11 };
+    const day = parseInt(match[1]);
+    const month = months[match[2].toLowerCase()];
+    const year = parseInt(match[3]);
+    let hour = parseInt(match[4]);
+    const min = parseInt(match[5]);
+    const ampm = match[6].toUpperCase();
+    if (ampm === 'PM' && hour < 12) hour += 12;
+    if (ampm === 'AM' && hour === 12) hour = 0;
+    if (month !== undefined) {
+      const utcMs = Date.UTC(year, month, day, hour - 8, min); // PST = UTC+8
+      return utcMs;
+    }
+  }
+
+  // Fallback: try Date.parse
+  const d2 = new Date(cleaned);
+  return isNaN(d2.getTime()) ? 0 : d2.getTime() - 8 * 3_600_000;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
