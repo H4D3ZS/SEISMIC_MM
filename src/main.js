@@ -667,6 +667,8 @@ async function boot() {
             riskScore: parseFloat(riskScore.toFixed(3)),
             zonesAnalyzed: mcSum.zonesAnalyzed || 0,
             faultsAnalyzed: mcSum.faultsAnalyzed || 0,
+            timingWindows: result.timing?.timingWindows || [],
+            multiHazard: result.multiHazard || null,
           });
         } catch (err) {
           predictTerminal.textContent += ` ERROR: ${err.message}`;
@@ -677,13 +679,20 @@ async function boot() {
       ranked.sort((a, b) => b.riskScore - a.riskScore);
       const top10 = ranked.slice(0, 10);
 
-      // Display top 10
+      // Display top 10 with timing windows
       if (top10El) {
         top10El.textContent = '';
         top10.forEach((loc, i) => {
           const riskColor = loc.riskScore > 3 ? '#ff1a44' : loc.riskScore > 1.5 ? '#ffaa00' : '#00ff88';
           const label = loc.zoneName || loc.faultName || loc.source;
           top10El.textContent += `[${i+1}] ${loc.lat.toFixed(2)}°N ${loc.lon.toFixed(2)}°E  Risk: ${loc.riskScore.toFixed(2)}  HCM: M${loc.hazardMag.toFixed(1)}  ${label}\n`;
+          if (loc.timingWindows && loc.timingWindows.length > 0) {
+            const best = loc.timingWindows.reduce((b, w) => w.probability > b.probability ? w : b, loc.timingWindows[0]);
+            top10El.textContent += `    WHEN: ${best.window} (${best.probability.toFixed(1)}% — ${best.confidence})\n`;
+          }
+          if (loc.overdueRatio > 0.8) {
+            top10El.textContent += `    STRAIN: ${loc.overdueRatio.toFixed(1)}x overdue\n`;
+          }
         });
         top10El.scrollTop = 0;
       }
