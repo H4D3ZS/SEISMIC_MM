@@ -145,7 +145,7 @@ export class NasagradeSeismicSimulator {
   constructor(engineInstance) {
     this.engine = engineInstance;
     this.ollamaUrl = "http://localhost:11434/api/chat";
-    this.activeModel = "gemma4:12b";
+    this.activeModel = "huihui_ai/gemma-4-abliterated:12b-q4_K";
     this.predictor = new EarthquakePredictor();
     this.monteCarloSimulator = new MonteCarloSimulator();
   }

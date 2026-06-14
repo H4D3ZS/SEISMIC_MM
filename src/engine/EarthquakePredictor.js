@@ -49,9 +49,10 @@ function mulberry32(seed) {
 export class EarthquakePredictor {
   constructor() {
     this.ollamaUrl = 'http://localhost:11434/api/chat';
-    this.activeModel = 'gemma4:12b';
+    this.activeModel = 'huihui_ai/gemma-4-abliterated:12b-q4_K';
     this.rng = mulberry32(0xDEADBEEF);
     this.improver = new PredictionImprover();
+    this.simulator = new MonteCarloSimulator({ numSimulations: 100_000 });
   }
 
   /**
