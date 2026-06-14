@@ -24,6 +24,22 @@
   <div id="canvas-container" role="img"
        aria-label="3D interactive seismic map of the Philippine Archipelago"></div>
 
+  <!-- Cockpit Frame Overlay (Pragmata-style) -->
+  <div id="cockpit-frame" style="position: fixed; inset: 0; z-index: 4; pointer-events: none;">
+    <!-- Corner brackets -->
+    <div style="position: absolute; top: 44px; left: 0; width: 30px; height: 30px; border-top: 2px solid rgba(0,200,255,0.2); border-left: 2px solid rgba(0,200,255,0.2);"></div>
+    <div style="position: absolute; top: 44px; right: 0; width: 30px; height: 30px; border-top: 2px solid rgba(0,200,255,0.2); border-right: 2px solid rgba(0,200,255,0.2);"></div>
+    <div style="position: absolute; bottom: 48px; left: 0; width: 30px; height: 30px; border-bottom: 2px solid rgba(0,200,255,0.2); border-left: 2px solid rgba(0,200,255,0.2);"></div>
+    <div style="position: absolute; bottom: 48px; right: 0; width: 30px; height: 30px; border-bottom: 2px solid rgba(0,200,255,0.2); border-right: 2px solid rgba(0,200,255,0.2);"></div>
+    <!-- Center crosshair -->
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; border: 1px solid rgba(0,200,255,0.15); border-radius: 50%;"></div>
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 8px; height: 1px; background: rgba(0,200,255,0.2);"></div>
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(90deg); width: 8px; height: 1px; background: rgba(0,200,255,0.2);"></div>
+    <!-- Side tick marks -->
+    <div style="position: absolute; top: 50%; left: 260px; width: 8px; height: 1px; background: rgba(0,200,255,0.12);"></div>
+    <div style="position: absolute; top: 50%; right: 260px; width: 8px; height: 1px; background: rgba(0,200,255,0.12);"></div>
+  </div>
+
   <!-- ══════════════════════════════════════════════════════════════
        TOP HUD BAR
   ══════════════════════════════════════════════════════════════ -->

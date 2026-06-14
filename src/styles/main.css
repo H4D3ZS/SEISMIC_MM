@@ -2177,61 +2177,90 @@ input[type="range"]:focus-visible {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   PRAGMATA-GRADE HUD OVERLAY
-   Cockpit-style scan lines, angular borders, glassmorphism
+   PRAGMATA-GRADE 3D COCKPIT HUD
+   NASA Real-Time Monitoring System — Interactive Cockpit Interface
    ═══════════════════════════════════════════════════════════════════════ */
 
-/* ── Scan Line Overlay ──────────────────────────────────────────────── */
-#canvas-container::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: 3;
-  pointer-events: none;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0, 200, 255, 0.015) 2px,
-    rgba(0, 200, 255, 0.015) 4px
-  );
-  mix-blend-mode: screen;
+/* ── Core Palette (Pragmata-inspired) ──────────────────────────────── */
+:root {
+  --void:        #020408;
+  --surface:     #060c18;
+  --panel-bg:    rgba(4, 10, 24, 0.88);
+  --border:      rgba(0, 180, 255, 0.12);
+  --border-hot:  rgba(0, 220, 255, 0.45);
+  --glow-cyan:   rgba(0, 200, 255, 0.35);
+  --glow-soft:   rgba(0, 200, 255, 0.08);
+  --cyan:        #00d4ff;
+  --cyan-dim:    #006699;
+  --green:       #00ff88;
+  --amber:       #ffaa00;
+  --red:         #ff1a44;
+  --violet:      #a855f7;
+  --text-primary:   #e8f4ff;
+  --text-secondary: #5a9ab5;
+  --text-dim:       #2a3a48;
+  --panel-w: 260px;
+  --topbar-h: 44px;
+  --bottombar-h: 48px;
+  --font-mono: 'Consolas', 'SF Mono', 'Fira Code', monospace;
+  --font-sans: 'Inter', -apple-system, system-ui, sans-serif;
 }
 
-/* ── Vignette Overlay ───────────────────────────────────────────────── */
+/* ── Cockpit Frame Overlay ─────────────────────────────────────────── */
 #canvas-container::before {
   content: '';
   position: fixed;
   inset: 0;
   z-index: 3;
   pointer-events: none;
-  background: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, 0.4) 100%);
+  background:
+    radial-gradient(ellipse at center, transparent 40%, rgba(0, 10, 30, 0.5) 100%),
+    linear-gradient(180deg, rgba(0, 20, 50, 0.3) 0%, transparent 15%, transparent 85%, rgba(0, 20, 50, 0.3) 100%);
 }
 
-/* ── Panel Glassmorphism Upgrade ────────────────────────────────────── */
-#panel-left, #panel-right {
-  background: rgba(4, 8, 18, 0.85);
-  backdrop-filter: blur(16px) saturate(1.2);
-  -webkit-backdrop-filter: blur(16px) saturate(1.2);
-  border-color: rgba(0, 200, 255, 0.12);
-  box-shadow: 0 0 20px rgba(0, 200, 255, 0.03), inset 0 0 30px rgba(0, 0, 0, 0.3);
-}
-
-#panel-left::after, #panel-right::after {
+/* ── Holographic Scan Lines ────────────────────────────────────────── */
+#canvas-container::after {
   content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(0, 200, 255, 0.3), transparent);
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0, 180, 255, 0.012) 1px, rgba(0, 180, 255, 0.012) 2px),
+    repeating-linear-gradient(90deg, transparent, transparent 100px, rgba(0, 180, 255, 0.008) 100px, rgba(0, 180, 255, 0.008) 101px);
+  animation: scanline-drift 8s linear infinite;
 }
 
-/* ── Top HUD Bar Upgrade ────────────────────────────────────────────── */
+@keyframes scanline-drift {
+  0% { background-position: 0 0, 0 0; }
+  100% { background-position: 0 4px, 0 0; }
+}
+
+/* ── Cockpit Corner Brackets ───────────────────────────────────────── */
+body::before, body::after {
+  content: '';
+  position: fixed;
+  z-index: 99;
+  pointer-events: none;
+}
+
+body::before {
+  top: var(--topbar-h); left: 0;
+  width: 100%; height: 100%;
+  border-top: 1px solid rgba(0, 200, 255, 0.06);
+  border-bottom: 1px solid rgba(0, 200, 255, 0.06);
+}
+
+/* ── Top HUD Bar (Cockpit Header) ──────────────────────────────────── */
 #hud-topbar {
-  background: rgba(4, 8, 18, 0.92);
-  backdrop-filter: blur(20px) saturate(1.3);
-  -webkit-backdrop-filter: blur(20px) saturate(1.3);
-  border-bottom: 1px solid rgba(0, 200, 255, 0.15);
-  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(0, 200, 255, 0.08);
+  background: linear-gradient(180deg, rgba(4, 12, 30, 0.95), rgba(4, 10, 24, 0.92));
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  border-bottom: 1px solid rgba(0, 200, 255, 0.12);
+  box-shadow:
+    0 2px 30px rgba(0, 0, 0, 0.6),
+    0 1px 0 rgba(0, 200, 255, 0.06),
+    inset 0 -1px 0 rgba(0, 200, 255, 0.04);
 }
 
 #hud-topbar::after {
@@ -2239,182 +2268,266 @@ input[type="range"]:focus-visible {
   position: absolute;
   bottom: 0; left: 0; right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent 5%, rgba(0, 200, 255, 0.25) 50%, transparent 95%);
+  background: linear-gradient(90deg, transparent 2%, rgba(0, 200, 255, 0.2) 50%, transparent 98%);
 }
 
-/* ── Panel Section Angular Borders ──────────────────────────────────── */
+/* ── Side Panels (Cockpit Glass) ───────────────────────────────────── */
+#panel-left, #panel-right {
+  background: linear-gradient(180deg, rgba(4, 10, 24, 0.9), rgba(2, 6, 16, 0.92));
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  border-color: rgba(0, 180, 255, 0.08);
+  box-shadow:
+    0 0 40px rgba(0, 0, 0, 0.4),
+    inset 0 0 40px rgba(0, 10, 30, 0.3),
+    inset 1px 0 0 rgba(0, 200, 255, 0.04),
+    inset -1px 0 0 rgba(0, 200, 255, 0.04);
+}
+
+#panel-left::after, #panel-right::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 200, 255, 0.2), transparent);
+}
+
+/* ── Cockpit Corner Decorations ────────────────────────────────────── */
+#panel-left::before, #panel-right::before {
+  content: '';
+  position: absolute;
+  width: 16px; height: 16px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+#panel-left::before {
+  top: 0; left: 0;
+  border-top: 2px solid rgba(0, 200, 255, 0.25);
+  border-left: 2px solid rgba(0, 200, 255, 0.25);
+}
+
+#panel-right::before {
+  top: 0; right: 0;
+  border-top: 2px solid rgba(0, 200, 255, 0.25);
+  border-right: 2px solid rgba(0, 200, 255, 0.25);
+}
+
+/* ── Panel Sections (Angular Cockpit Tiles) ─────────────────────────── */
 .panel-section {
   position: relative;
-  border-bottom: 1px solid rgba(0, 200, 255, 0.08);
+  border-bottom: 1px solid rgba(0, 200, 255, 0.06);
+  padding: 10px 12px;
 }
 
 .panel-section::before {
   content: '';
   position: absolute;
   top: 0; left: 0;
-  width: 3px; height: 100%;
-  background: linear-gradient(180deg, rgba(0, 200, 255, 0.2), transparent);
+  width: 2px; height: 100%;
+  background: linear-gradient(180deg, rgba(0, 200, 255, 0.15), transparent 70%);
 }
 
 .panel-heading {
   position: relative;
-  padding-left: 8px;
+  padding-left: 10px;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--cyan);
+  font-weight: 600;
+  text-transform: uppercase;
 }
 
 .panel-heading::before {
-  content: '▸';
+  content: '';
   position: absolute;
-  left: -2px;
-  color: var(--cyan);
-  font-size: 8px;
-  opacity: 0.6;
+  left: 0; top: 50%;
+  transform: translateY(-50%);
+  width: 4px; height: 4px;
+  background: var(--cyan);
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  opacity: 0.7;
 }
 
-/* ── Safety Card Angular Corners ────────────────────────────────────── */
+/* ── Safety Cards (Pragmata Holographic Panels) ────────────────────── */
 .safety-card {
   position: relative;
-  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  background: rgba(0, 15, 35, 0.4);
+  border: 1px solid rgba(0, 200, 255, 0.1);
+  border-radius: 2px;
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  box-shadow: 0 0 20px rgba(0, 200, 255, 0.03), inset 0 0 20px rgba(0, 0, 0, 0.3);
 }
 
 .safety-card::before {
   content: '';
   position: absolute;
   inset: 0;
-  border: 1px solid rgba(0, 200, 255, 0.15);
-  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  border: 1px solid rgba(0, 200, 255, 0.08);
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
   pointer-events: none;
 }
 
-/* ── Button Glow Effects ────────────────────────────────────────────── */
-button, .nlp-btn {
-  transition: all 0.2s ease;
-}
-
-button:active, .nlp-btn:active {
-  transform: scale(0.98);
-}
-
-#predict-btn, #bayesian-predict-btn, #nlp-submit-btn, #ai-train-btn {
-  position: relative;
-  overflow: hidden;
-}
-
-#predict-btn::after, #bayesian-predict-btn::after, #nlp-submit-btn::after, #ai-train-btn::after {
+.safety-card::after {
   content: '';
   position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(0, 200, 255, 0.1) 0%, transparent 70%);
-  opacity: 0;
-  transition: opacity 0.3s;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(0, 200, 255, 0.15), transparent 80%);
   pointer-events: none;
 }
 
-#predict-btn:hover::after, #bayesian-predict-btn:hover::after, #nlp-submit-btn:hover::after, #ai-train-btn:hover::after {
+.safety-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* ── Buttons (Pragmata Interactive Elements) ────────────────────────── */
+button {
+  position: relative;
+  transition: all 0.15s ease;
+  font-family: var(--font-mono);
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(0, 200, 255, 0.05), transparent);
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+button:hover::before {
   opacity: 1;
 }
 
-/* ── Status Value Pulse ─────────────────────────────────────────────── */
-.status-value, .hud-clock {
-  animation: hud-pulse 4s ease-in-out infinite;
+/* ── Status Values (Holographic Readouts) ──────────────────────────── */
+.status-value {
+  color: var(--cyan);
+  font-size: 11px;
+  font-weight: 600;
+  text-shadow: 0 0 8px rgba(0, 200, 255, 0.3);
+  animation: holo-pulse 3s ease-in-out infinite;
 }
 
-@keyframes hud-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.85; }
+@keyframes holo-pulse {
+  0%, 100% { opacity: 1; text-shadow: 0 0 8px rgba(0, 200, 255, 0.3); }
+  50% { opacity: 0.9; text-shadow: 0 0 12px rgba(0, 200, 255, 0.5); }
 }
 
-/* ── Live Feed Glow ─────────────────────────────────────────────────── */
-#live-feed-list {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0, 200, 255, 0.3) transparent;
+.hud-clock {
+  color: var(--cyan);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-shadow: 0 0 10px rgba(0, 200, 255, 0.4);
 }
 
-.feed-item {
-  border-left: 2px solid transparent;
-  transition: all 0.2s ease;
+/* ── Terminal Windows (Cockpit Displays) ────────────────────────────── */
+#predict-terminal, #gfm-terminal, #bayesian-terminal, #nlp-result, #sim-log {
+  background: rgba(0, 8, 20, 0.8);
+  border: 1px solid rgba(0, 200, 255, 0.1);
+  border-radius: 2px;
+  box-shadow:
+    0 0 15px rgba(0, 200, 255, 0.02),
+    inset 0 0 20px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(0, 200, 255, 0.05);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  line-height: 1.4;
 }
 
-.feed-item:hover {
-  border-left-color: var(--cyan);
-  background: rgba(0, 200, 255, 0.04);
-}
-
-/* ── Terminal Glow ──────────────────────────────────────────────────── */
-#predict-terminal, #gfm-terminal, #bayesian-terminal, #nlp-result {
-  border-color: rgba(0, 200, 255, 0.15);
-  box-shadow: 0 0 10px rgba(0, 200, 255, 0.03), inset 0 0 15px rgba(0, 0, 0, 0.4);
-}
-
-/* ── Toggle Switch Glow ─────────────────────────────────────────────── */
+/* ── Toggle Switches (Cockpit Controls) ─────────────────────────────── */
 .toggle-track {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(0, 200, 255, 0.15);
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .layer-toggle input:checked + .toggle-track {
-  box-shadow: 0 0 8px rgba(0, 200, 255, 0.3), inset 0 1px 3px rgba(0, 0, 0, 0.2);
+  background: rgba(0, 200, 255, 0.2);
+  border-color: rgba(0, 200, 255, 0.3);
+  box-shadow: 0 0 8px rgba(0, 200, 255, 0.2), inset 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
-/* ── Range Slider Glow ──────────────────────────────────────────────── */
-input[type="range"]::-webkit-slider-thumb {
+.layer-toggle input:checked + .toggle-track::after {
+  background: var(--cyan);
   box-shadow: 0 0 6px rgba(0, 200, 255, 0.5);
 }
 
+/* ── Range Sliders (Cockpit Dials) ─────────────────────────────────── */
+input[type="range"] {
+  background: rgba(0, 200, 255, 0.08);
+  border-radius: 2px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  background: var(--cyan);
+  box-shadow: 0 0 8px rgba(0, 200, 255, 0.4);
+}
+
 input[type="range"]:hover::-webkit-slider-thumb {
-  box-shadow: 0 0 10px rgba(0, 200, 255, 0.7);
-  transform: scale(1.2);
+  box-shadow: 0 0 14px rgba(0, 200, 255, 0.6);
 }
 
-/* ── Corner Decorations ─────────────────────────────────────────────── */
-#panel-left::before, #panel-right::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0;
-  width: 12px; height: 12px;
-  border-top: 2px solid rgba(0, 200, 255, 0.3);
-  border-left: 2px solid rgba(0, 200, 255, 0.3);
-  pointer-events: none;
-  z-index: 10;
+/* ── Select Dropdowns (Cockpit Menus) ──────────────────────────────── */
+select {
+  background: rgba(0, 10, 25, 0.9);
+  border: 1px solid rgba(0, 200, 255, 0.12);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  border-radius: 2px;
 }
 
-#panel-right::before {
-  left: auto;
-  right: 0;
-  border-left: none;
-  border-right: 2px solid rgba(0, 200, 255, 0.3);
+select:focus {
+  border-color: rgba(0, 200, 255, 0.3);
+  box-shadow: 0 0 8px rgba(0, 200, 255, 0.15);
 }
 
-/* ── Coordinate Grid Subtle Glow ────────────────────────────────────── */
-.telem-row {
-  border-bottom: 1px solid rgba(0, 200, 255, 0.05);
-  transition: background 0.15s;
+/* ── Feed Items (Cockpit Alerts) ────────────────────────────────────── */
+.feed-item {
+  border-left: 2px solid transparent;
+  transition: all 0.15s ease;
 }
 
-.telem-row:hover {
+.feed-item:hover {
+  border-left-color: var(--cyan);
   background: rgba(0, 200, 255, 0.03);
 }
 
-/* ── Bottom Bar Upgrade ─────────────────────────────────────────────── */
+/* ── Data Rows (Cockpit Readouts) ──────────────────────────────────── */
+.telem-row {
+  border-bottom: 1px solid rgba(0, 200, 255, 0.04);
+  transition: background 0.15s;
+  padding: 3px 0;
+}
+
+.telem-row:hover {
+  background: rgba(0, 200, 255, 0.02);
+}
+
+/* ── Bottom Bar (Cockpit Footer) ───────────────────────────────────── */
 #hud-bottombar {
-  background: rgba(4, 8, 18, 0.92);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-top: 1px solid rgba(0, 200, 255, 0.12);
-  box-shadow: 0 -2px 20px rgba(0, 0, 0, 0.5), 0 -1px 0 rgba(0, 200, 255, 0.08);
+  background: linear-gradient(0deg, rgba(4, 12, 30, 0.95), rgba(4, 10, 24, 0.92));
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  border-top: 1px solid rgba(0, 200, 255, 0.1);
+  box-shadow: 0 -2px 30px rgba(0, 0, 0, 0.6), 0 -1px 0 rgba(0, 200, 255, 0.06);
 }
 
-/* ── Text Selection ─────────────────────────────────────────────────── */
-::selection {
-  background: rgba(0, 200, 255, 0.25);
-  color: #ffffff;
-}
-
-/* ── Scrollbar Styling ──────────────────────────────────────────────── */
+/* ── Scrollbars (Cockpit Style) ────────────────────────────────────── */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {
@@ -2422,10 +2535,65 @@ input[type="range"]:hover::-webkit-slider-thumb {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 200, 255, 0.2);
-  border-radius: 3px;
+  background: rgba(0, 200, 255, 0.15);
+  border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 200, 255, 0.4);
+  background: rgba(0, 200, 255, 0.3);
+}
+
+/* ── Text Selection ─────────────────────────────────────────────────── */
+::selection {
+  background: rgba(0, 200, 255, 0.2);
+  color: #ffffff;
+}
+
+/* ── Live Beacon Pulse ──────────────────────────────────────────────── */
+@keyframes beacon-blink {
+  0% { opacity: 0.3; transform: scale(0.9); }
+  100% { opacity: 1.0; transform: scale(1.1); }
+}
+
+/* ── Loading Animation ──────────────────────────────────────────────── */
+@keyframes cockpit-boot {
+  0% { opacity: 0; transform: translateY(5px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.panel-section {
+  animation: cockpit-boot 0.3s ease-out;
+}
+
+/* ── Interactive Hover Glow ─────────────────────────────────────────── */
+#panel-left section:hover,
+#panel-right section:hover {
+  background: rgba(0, 200, 255, 0.01);
+}
+
+/* ── Status Badges ──────────────────────────────────────────────────── */
+.source-badge {
+  padding: 2px 6px;
+  border-radius: 2px;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
+
+.source-badge.source-live {
+  background: rgba(0, 255, 136, 0.1);
+  color: var(--green);
+  border: 1px solid rgba(0, 255, 136, 0.2);
+}
+
+.source-badge.source-updating {
+  background: rgba(255, 170, 0, 0.1);
+  color: var(--amber);
+  border: 1px solid rgba(255, 170, 0, 0.2);
+}
+
+.source-badge.source-offline {
+  background: rgba(255, 26, 68, 0.1);
+  color: var(--red);
+  border: 1px solid rgba(255, 26, 68, 0.2);
 }
