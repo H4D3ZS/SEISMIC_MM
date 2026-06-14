@@ -39,6 +39,27 @@ const USGS_BASE = 'https://earthquake.usgs.gov/fdsnws/event/1/query';
 const PHIVOLCS_PROXY = '/phivolcs-proxy/';
 
 /**
+ * Helper to fetch a resource with an abortable timeout.
+ * Prevents loading hangs if the external APIs or local proxy are unresponsive.
+ */
+async function fetchWithTimeout(resource, options = {}) {
+  const { timeout = 30000 } = options;
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  try {
+    const response = await fetch(resource, {
+      ...options,
+      signal: controller.signal
+    });
+    clearTimeout(id);
+    return response;
+  } catch (error) {
+    clearTimeout(id);
+    throw error;
+  }
+}
+
+/**
  * @typedef {object} LiveEvent
  * @property {string} id
  * @property {number} lat
@@ -89,7 +110,7 @@ export async function fetchUSGSEvents(opts = {}) {
 
   const url = `${USGS_BASE}?${params.toString()}`;
 
-  const res = await fetch(url, { cache: 'no-store' });
+  const res = await fetchWithTimeout(url, { cache: 'no-store' });
   if (!res.ok) throw new Error(`USGS FDSNWS HTTP ${res.status}`);
 
   const json = await res.json();
@@ -133,7 +154,7 @@ export async function fetchUSGSEvents(opts = {}) {
  */
 export async function fetchPhivolcsEvents() {
   try {
-    const res = await fetch(PHIVOLCS_PROXY, {
+    const res = await fetchWithTimeout(PHIVOLCS_PROXY, {
       cache:   'no-store',
       headers: { 'Accept': 'text/html,application/xhtml+xml' },
     });
@@ -180,7 +201,8 @@ function _parsePhivolcsHTML(html) {
       const mag     = parseFloat(cells[4]?.textContent?.trim());
       const place   = cells[5]?.textContent?.trim() ?? '';
 
-      if (isNaN(lat) || isNaN(lon) || isNaN(mag)) continue;
+      const linkEl = cells[0]?.querySelector('a');
+      const bulletinUrl = linkEl?.getAttribute('href') ?? '';
 
       // Parse Philippine Standard Time (UTC+8) to Unix ms
       // Format example: "12 June 2026 - 05:37 PM"
@@ -201,6 +223,7 @@ function _parsePhivolcsHTML(html) {
         strike: 0,
         dip:    0,
         rake:   0,
+        bulletinUrl: bulletinUrl,
       });
 
       rowsParsed++;
@@ -280,6 +303,7 @@ export function packEventsToBinary(events) {
   const count  = events.length;
   const buffer = new Float32Array(count * RECORD_SIZE);
   const pgaBuf = new Float32Array(count);
+  const yearBuf = new Float32Array(count);
 
   for (let i = 0; i < count; i++) {
     const ev   = events[i];
@@ -295,9 +319,15 @@ export function packEventsToBinary(events) {
 
     // Simplified Atkinson-Boore PGA proxy (order-of-magnitude only)
     pgaBuf[i] = Math.min(3.0, Math.pow(10, 0.5 * ev.mag - Math.log10(ev.depth + 10) - 1.5));
+
+    // Convert event timestamp to decimal year
+    const date = new Date(ev.time);
+    const year = date.getUTCFullYear();
+    const day = (date.getTime() - Date.UTC(year, 0, 1)) / (86400000 * 365.25);
+    yearBuf[i] = year + day;
   }
 
-  return { buffer, pgaBuffer: pgaBuf, count, events };
+  return { buffer, pgaBuffer: pgaBuf, yearBuffer: yearBuf, count, events };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -382,5 +412,177 @@ export function getEventRecord(buffer, index) {
     strike: buffer[base + 4],
     dip:    buffer[base + 5],
     rake:   buffer[base + 6],
+  };
+}
+
+/**
+ * Fetch historical earthquakes since 1990 from USGS inside the Philippine bounding box.
+ * 
+ * @param {number} [minMag=4.5]
+ * @returns {Promise<LiveEvent[]>}
+ */
+export async function fetchHistoricalUSGSEvents(minMag = 4.5) {
+  const params = new URLSearchParams({
+    format:       'geojson',
+    starttime:    '1990-01-01',
+    endtime:      new Date().toISOString(),
+    minlatitude:  PH_LAT_MIN,
+    maxlatitude:  PH_LAT_MAX,
+    minlongitude: PH_LON_MIN,
+    maxlongitude: PH_LON_MAX,
+    minmagnitude: minMag,
+    orderby:      'time',
+    limit:        6000,
+  });
+
+  const url = `${USGS_BASE}?${params.toString()}`;
+  const res = await fetchWithTimeout(url, { timeout: 30000 });
+  if (!res.ok) throw new Error(`USGS Historical HTTP ${res.status}`);
+
+  const json = await res.json();
+  return (json.features ?? []).map(f => {
+    const p    = f.properties;
+    const [lon, lat, depth] = f.geometry.coordinates;
+    return {
+      id:     f.id ? `usgs_${f.id}` : `usgs_${p.time}_${lat}_${lon}`,
+      lat,
+      lon,
+      depth:  depth ?? 10,
+      mag:    p.mag,
+      time:   p.time,
+      place:  p.place,
+      source: 'USGS',
+      strike: 0,
+      dip:    0,
+      rake:   0,
+    };
+  });
+}
+
+/**
+ * Fetch and parse a detailed PHIVOLCS bulletin page to extract reported felt
+ * intensities, instrumental intensities, and geodynamic parameters.
+ *
+ * @param {string} bulletinUrl relative path like "2026_Earthquake_Information/June/2026_0611_231831_B1.html"
+ * @returns {Promise<object|null>}
+ */
+export async function fetchPhivolcsDetailedBulletin(bulletinUrl) {
+  if (!bulletinUrl) return null;
+  
+  // Resolve proxy path to bypass CORS in development
+  let targetUrl = bulletinUrl;
+  if (!bulletinUrl.startsWith('http')) {
+    targetUrl = `${PHIVOLCS_PROXY.replace(/\/$/, '')}/${bulletinUrl.replace(/^\//, '')}`;
+  } else {
+    // Rewrite absolute URL to local proxy path
+    targetUrl = targetUrl.replace('https://earthquake.phivolcs.dost.gov.ph', PHIVOLCS_PROXY.replace(/\/$/, ''));
+  }
+  
+  try {
+    const res = await fetchWithTimeout(targetUrl, {
+      cache: 'no-store',
+      headers: { 'Accept': 'text/html,application/xhtml+xml' },
+    });
+    if (!res.ok) throw new Error(`HTTP status ${res.status}`);
+    const html = await res.text();
+    return _parsePhivolcsBulletinHTML(html);
+  } catch (err) {
+    console.warn('[PhivolcsDataService] Failed to fetch detailed bulletin:', err.message);
+    return null;
+  }
+}
+
+/**
+ * Parses PHIVOLCS detailed bulletin page.
+ * Uses TreeWalker traversal and fallback Regex matching for robust extraction.
+ *
+ * @param {string} html
+ * @returns {object}
+ * @private
+ */
+function _parsePhivolcsBulletinHTML(html) {
+  const parser = new DOMParser();
+  const doc    = parser.parseFromString(html, 'text/html');
+
+  let feltIntensities = [];
+  let instrumentalIntensities = [];
+  let originType = 'Tectonic';
+  
+  // Gather all text elements in document order
+  const walker = doc.createTreeWalker(doc.body || doc, NodeFilter.SHOW_TEXT);
+  const texts = [];
+  while (walker.nextNode()) {
+    const text = walker.currentNode.textContent.trim();
+    if (text) texts.push(text);
+  }
+
+  let currentSection = '';
+  for (let i = 0; i < texts.length; i++) {
+    const text = texts[i];
+    const lower = text.toLowerCase();
+
+    // Detect section header bounds
+    if (lower.includes('reported intensities') || lower.includes('felt intensities')) {
+      currentSection = 'felt';
+      continue;
+    }
+    if (lower.includes('instrumental intensities') || lower.includes('instrumental intensity')) {
+      currentSection = 'instrumental';
+      continue;
+    }
+    if (lower.includes('expecting damage') || lower.includes('expecting aftershocks') || lower.includes('issued on')) {
+      currentSection = '';
+    }
+
+    // Parse intensity listings
+    if (currentSection === 'felt' || currentSection === 'instrumental') {
+      if (text.includes('Intensity') || text.match(/^[IVXLCDM]+\s*-/)) {
+        if (currentSection === 'felt') {
+          feltIntensities.push(text);
+        } else {
+          instrumentalIntensities.push(text);
+        }
+      }
+    }
+
+    // Parse geodynamic origin (Tectonic / Volcanic)
+    if (lower.includes('origin') || lower.includes('source')) {
+      const nextText = texts[i + 1] || '';
+      if (nextText.toLowerCase().includes('tectonic')) {
+        originType = 'Tectonic';
+      } else if (nextText.toLowerCase().includes('volcanic')) {
+        originType = 'Volcanic';
+      }
+    }
+  }
+
+  // Fallback: Regex extraction on raw text content
+  if (feltIntensities.length === 0 && instrumentalIntensities.length === 0) {
+    const bodyText = doc.body?.textContent || doc.documentElement?.textContent || '';
+    const matches = bodyText.match(/Intensity\s+[IVXLCDM]+\s*-\s*[^\n\r]+/gi) || [];
+    
+    const feltHeaderIdx = bodyText.toLowerCase().indexOf('reported intensities');
+    const instHeaderIdx = bodyText.toLowerCase().indexOf('instrumental intensities');
+
+    for (const match of matches) {
+      const clean = match.replace(/\s+/g, ' ').trim();
+      const matchIdx = bodyText.indexOf(match);
+
+      if (instHeaderIdx !== -1 && matchIdx > instHeaderIdx) {
+        instrumentalIntensities.push(clean);
+      } else {
+        feltIntensities.push(clean);
+      }
+    }
+  }
+
+  // Clean and deduplicate lists
+  feltIntensities = [...new Set(feltIntensities.map(s => s.trim()))];
+  instrumentalIntensities = [...new Set(instrumentalIntensities.map(s => s.trim()))];
+
+  return {
+    feltIntensities,
+    instrumentalIntensities,
+    originType
   };
 }

@@ -49,6 +49,7 @@ const VERTEX_SHADER = /* glsl */`
   attribute float aMag;    // Moment Magnitude
   attribute float aDepth;  // Hypocentral depth (km)
   attribute float aPGA;    // Peak Ground Acceleration (g), packed for color mode
+  attribute float aYear;   // Decimal year of occurrence
 
   // Varyings passed to fragment shader
   varying float vDepthNorm;   // Normalized depth  [0..1]  (0 = surface, 1 = 700 km)
@@ -60,6 +61,7 @@ const VERTEX_SHADER = /* glsl */`
   uniform float uMagMin;
   uniform float uMagMax;
   uniform float uDepthMax;
+  uniform float uYearMax;
 
   void main() {
     vLocalPos  = position;
@@ -68,7 +70,7 @@ const VERTEX_SHADER = /* glsl */`
     vPGANorm   = clamp(aPGA / 2.0, 0.0, 1.0);
 
     // Filter: collapse filtered instances to a degenerate point (no overdraw)
-    bool filtered = (aMag < uMagMin) || (aMag > uMagMax) || (aDepth > uDepthMax);
+    bool filtered = (aMag < uMagMin) || (aMag > uMagMax) || (aDepth > uDepthMax) || (aYear > uYearMax);
     if (filtered) {
       gl_Position = vec4(2.0, 2.0, 2.0, 1.0); // Off-screen clipping
       return;
@@ -155,6 +157,7 @@ export class SeismicCatalogRenderer {
       uMagMin:    { value: 2.0  },
       uMagMax:    { value: 9.0  },
       uDepthMax:  { value: 700.0 },
+      uYearMax:   { value: 2026.5 },
       uColorMode: { value: 0    }, // 0=depth, 1=mag, 2=PGA
     };
   }
@@ -167,8 +170,9 @@ export class SeismicCatalogRenderer {
    *
    * @param {Float32Array} binaryBuffer  Packed seismic records (RECORD_SIZE per event)
    * @param {Float32Array} [pgaBuffer]   Optional parallel PGA array (one value per event)
+   * @param {Float32Array} [yearBuffer]  Optional parallel Year array (one value per event)
    */
-  renderBinarySeismicCatalog(binaryBuffer, pgaBuffer = null) {
+  renderBinarySeismicCatalog(binaryBuffer, pgaBuffer = null, yearBuffer = null) {
     // Validate buffer alignment
     if (binaryBuffer.length % RECORD_SIZE !== 0) {
       console.error(
@@ -187,6 +191,7 @@ export class SeismicCatalogRenderer {
     const magArray   = new Float32Array(count);
     const depthArray = new Float32Array(count);
     const pgaArray   = new Float32Array(count);
+    const yearArray  = new Float32Array(count);
 
     const dummy = new THREE.Object3D();
 
@@ -233,6 +238,7 @@ export class SeismicCatalogRenderer {
       magArray[i]   = mag;
       depthArray[i] = depth;
       pgaArray[i]   = pgaBuffer ? pgaBuffer[i] : 0.0;
+      yearArray[i]  = yearBuffer ? yearBuffer[i] : 2026.0;
     }
 
     instancedMesh.instanceMatrix.needsUpdate = true;
@@ -249,6 +255,10 @@ export class SeismicCatalogRenderer {
     baseGeometry.setAttribute(
       'aPGA',
       new THREE.InstancedBufferAttribute(pgaArray, 1)
+    );
+    baseGeometry.setAttribute(
+      'aYear',
+      new THREE.InstancedBufferAttribute(yearArray, 1)
     );
 
     this.engine.addLayer('seismic_catalog', instancedMesh);
@@ -276,6 +286,14 @@ export class SeismicCatalogRenderer {
    */
   setDepthFilter(maxKm) {
     this._uniforms.uDepthMax.value = maxKm;
+  }
+
+  /**
+   * Set the maximum year displayed. Events after this year are collapsed off-screen.
+   * @param {number} year
+   */
+  setYearMax(year) {
+    this._uniforms.uYearMax.value = year;
   }
 
   /**

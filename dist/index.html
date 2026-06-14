@@ -4,11 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CISV — SEISMIC Movement Monitoring | Philippine Geodynamic Command</title>
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-
-  <script type="module" crossorigin src="/assets/index-nOeEWVHu.js"></script>
-  <link rel="modulepreload" crossorigin href="/assets/three-BTZVEduv.js">
-  <link rel="stylesheet" crossorigin href="/assets/index-Db-1N8OR.css">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <style>
+    @keyframes beacon-blink {
+      0% { opacity: 0.2; transform: scale(0.9); }
+      100% { opacity: 1.0; transform: scale(1.1); }
+    }
+  </style>
+  <script type="module" crossorigin src="/assets/index-BUmn4oEF.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/three-Bpc9wDgF.js">
+  <link rel="stylesheet" crossorigin href="/assets/index-DfYwZg2a.css">
 </head>
 <body>
 
@@ -27,8 +32,9 @@
   <header id="hud-topbar" role="banner" aria-label="Mission control header">
     <div class="hud-logo">
       <span class="logo-accent" aria-hidden="true">◈</span>
-      <span class="logo-primaSEISMIC Movement Monitoring
-      <span class="logo-sub">CYBER-IFRIT SEISMIC VISION</span>
+      <span class="logo-primary">CISV</span>
+      <span class="logo-sub">SEISMIC Movement Monitoring</span>
+      <span id="live-beacon" style="display: inline-flex; align-items: center; gap: 4px; margin-left: 10px; font-family: var(--font-mono); font-size: 7.5px; font-weight: bold; color: #ff1a44; text-shadow: 0 0 6px rgba(255, 26, 68, 0.4);"><span style="width: 5px; height: 5px; background: #ff1a44; border-radius: 50%; display: inline-block; animation: beacon-blink 1.2s infinite alternate;"></span>● LIVE FEED</span>
     </div>
 
     <div class="hud-status-cluster" role="status" aria-live="polite">
@@ -112,7 +118,41 @@
         </label>
         <p id="desc-pdz" class="sr-only">Toggle display of Permanent Danger Zone boundaries</p>
 
+        <label class="layer-toggle" for="toggle-faults">
+          <input type="checkbox" id="toggle-faults" checked />
+          <span class="toggle-track" aria-hidden="true"></span>
+          <span class="toggle-label">Active Fault Lines</span>
+        </label>
+        <p id="desc-faults" class="sr-only">Toggle display of active tectonic fault lines</p>
+
+        <label class="layer-toggle" for="toggle-gps">
+          <input type="checkbox" id="toggle-gps" checked />
+          <span class="toggle-track" aria-hidden="true"></span>
+          <span class="toggle-label">GPS Plate Vectors</span>
+        </label>
+        <p id="desc-gps" class="sr-only">Toggle display of geodetic tectonic movement vectors</p>
+
+        <label class="layer-toggle" for="toggle-hazards">
+          <input type="checkbox" id="toggle-hazards" checked />
+          <span class="toggle-track" aria-hidden="true"></span>
+          <span class="toggle-label">Vs30 Alluvial Hazards</span>
+        </label>
+        <p id="desc-hazards" class="sr-only">Toggle display of soil liquefaction and amplification pads</p>
+
       </div>
+    </section>
+
+    <section class="panel-section" aria-labelledby="mapstyle-heading">
+      <h2 class="panel-heading" id="mapstyle-heading">MAP STYLE</h2>
+      <div class="radio-group" role="radiogroup" aria-labelledby="mapstyle-heading">
+        <label class="radio-option"><input type="radio" name="mapstyle" value="mapbox_satellite" /> Mapbox Sat</label>
+        <label class="radio-option"><input type="radio" name="mapstyle" value="google_satellite" checked /> Google Sat</label>
+        <label class="radio-option"><input type="radio" name="mapstyle" value="esri_satellite" /> Esri Sat</label>
+        <label class="radio-option"><input type="radio" name="mapstyle" value="carto_dark" /> Carto Dark</label>
+      </div>
+      <p class="map-style-note" style="font-size: 7.5px; color: var(--text-secondary); margin-top: 5px; line-height: 1.25; font-family: var(--font-mono);">
+        Mapbox requires token in <code>.env</code>. Google is keyless default.
+      </p>
     </section>
 
 
@@ -155,6 +195,240 @@
       </div>
     </section>
 
+    <section class="panel-section" aria-labelledby="legend-heading">
+      <h2 class="panel-heading" id="legend-heading">MAP LEGEND</h2>
+      <div class="legend-container">
+        
+        <!-- Seismic / Earthquakes -->
+        <div class="legend-group">
+          <div class="legend-subheading">SEISMIC MAGNITUDE</div>
+          <div class="legend-item">
+            <span class="legend-symbol symbol-mag-large"></span>
+            <span class="legend-text">Major / Megashock (M<sub>w</sub> &ge; 7.0)</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-symbol symbol-mag-medium"></span>
+            <span class="legend-text">Moderate / Strong (M<sub>w</sub> 5.0 - 6.9)</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-symbol symbol-mag-small"></span>
+            <span class="legend-text">Minor / Light (M<sub>w</sub> &lt; 5.0)</span>
+          </div>
+        </div>
+
+        <!-- Seismic Depth -->
+        <div class="legend-group">
+          <div class="legend-subheading">SEISMIC HYPOCENTER DEPTH</div>
+          <div class="legend-item">
+            <span class="legend-symbol symbol-depth-shallow"></span>
+            <span class="legend-text">Shallow (&lt; 70 km)</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-symbol symbol-depth-inter"></span>
+            <span class="legend-text">Intermediate (70 - 300 km)</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-symbol symbol-depth-deep"></span>
+            <span class="legend-text">Deep (&gt; 300 km)</span>
+          </div>
+        </div>
+
+        <!-- Volcanic Alerts -->
+        <div class="legend-group">
+          <div class="legend-subheading">VOLCANIC ALERT LEVEL</div>
+          <div class="legend-item">
+            <span class="legend-symbol symbol-volc-5"></span>
+            <span class="legend-text">Level 5: Eruption (Violet Plume / Magma)</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-symbol symbol-volc-3"></span>
+            <span class="legend-text">Level 3-4: High Unrest (Red Plume / Lava)</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-symbol symbol-volc-2"></span>
+            <span class="legend-text">Level 2: Moderate Unrest (Amber Plume)</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-symbol symbol-volc-0"></span>
+            <span class="legend-text">Level 0-1: Quiet / Normal (Green Plume)</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-symbol symbol-pdz"></span>
+            <span class="legend-text">PDZ Geofence Ring (Danger Zone)</span>
+          </div>
+        </div>
+
+        <!-- Tectonic Boundaries -->
+        <div class="legend-group">
+          <div class="legend-subheading">TECTONIC FEATURES</div>
+          <div class="legend-item">
+            <span class="legend-symbol symbol-trench"></span>
+            <span class="legend-text">Subduction Trench Boundary</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-symbol" style="background: none; border-bottom: 2px dashed #ff4500; height: 0; width: 15px; display: inline-block; margin-right: 6px; transform: translateY(-4px);"></span>
+            <span class="legend-text">Active Tectonic Fault Line</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-symbol" style="background: none; color: #ffff00; font-size: 11px; display: inline-block; margin-right: 6px; line-height: 1; text-align: center;">➔</span>
+            <span class="legend-text">GPS Plate Velocity Vector</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="panel-section" aria-labelledby="ai-heading">
+      <h2 class="panel-heading" id="ai-heading">GEOPHYSICAL FOUNDATION MODEL (GFM)</h2>
+      <div class="nlp-input-group" style="border: 1px solid rgba(0, 200, 255, 0.2); padding: 10px; border-radius: 4px; background: rgba(0, 200, 255, 0.01); display: flex; flex-direction: column; gap: 8px;">
+        <div style="font-size: 9px; line-height: 1.3; color: var(--text-primary); font-family: var(--font-sans);">
+          Inference based on HF <strong>thinkonward/geophysical-foundation-model</strong>, trained on 25,000+ nodes and field precursors. Seismic hazard analysis powered by Torregosa et al. (2002) Philippine seismogenic zone data. Enhanced with Gemma 4 12B for multi-scenario earthquake prediction.
+        </div>
+        <div class="ai-status-row" style="margin-bottom: 4px; font-family: var(--font-mono); font-size: 8px; color: var(--text-secondary); display: flex; flex-direction: column; gap: 3px;">
+          <div><strong>MODEL STATUS:</strong> <span id="ai-model-status" style="color: var(--amber);">STANDBY (READY)</span></div>
+          <div><strong>HF REPO LIKES:</strong> <span id="hf-likes" style="color: var(--cyan);">--</span></div>
+          <div><strong>HF REPO DOWNLOADS:</strong> <span id="hf-downloads" style="color: var(--cyan);">--</span></div>
+          <div><strong>COULOMB LOADING:</strong> <span id="ai-coulomb-load" style="color: var(--text-dim);">--</span></div>
+          <div><strong>PREDICTED FOCUS:</strong> <span id="ai-predicted-loc" style="color: var(--text-dim);">--</span></div>
+        </div>
+
+        <div class="range-control" style="margin: 0; display: flex; flex-direction: column; gap: 3px;">
+          <label for="gfm-endpoint" class="range-label" style="font-size: 8px; margin: 0;">GFM API ENDPOINT</label>
+          <input type="text" id="gfm-endpoint" value="http://localhost:8081/predictions/geophysical_foundation_model" style="background: rgba(0,0,0,0.4); border: 1px solid var(--border); color: #ffffff; font-family: var(--font-mono); font-size: 9px; padding: 4px; border-radius: 2px; width: 100%; box-sizing: border-box;" />
+        </div>
+        <div class="range-control" style="margin: 0; display: flex; flex-direction: column; gap: 3px;">
+          <label for="hf-token" class="range-label" style="font-size: 8px; margin: 0;">HF TOKEN (ONLY FOR CLOUD)</label>
+          <input type="password" id="hf-token" placeholder="Optional token for Hugging Face Cloud" style="background: rgba(0,0,0,0.4); border: 1px solid var(--border); color: #ffffff; font-family: var(--font-mono); font-size: 9px; padding: 4px; border-radius: 2px; width: 100%; box-sizing: border-box;" />
+        </div>
+        <label class="layer-toggle" for="gfm-send-image" style="margin: 2px 0 4px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+          <input type="checkbox" id="gfm-send-image" checked />
+          <span class="toggle-track" aria-hidden="true"></span>
+          <span class="toggle-label" style="font-size: 9px;">Send Canvas as Binary Image Blob</span>
+        </label>
+
+        <!-- Toggle GFM Attention Links -->
+        <label class="layer-toggle" for="toggle-gfm-attention" style="margin: 4px 0 2px;">
+          <input type="checkbox" id="toggle-gfm-attention" checked />
+          <span class="toggle-track" aria-hidden="true"></span>
+          <span class="toggle-label" style="font-size: 9px;">Show GFM Attention Links</span>
+        </label>
+
+        <!-- Canvases for GFM diagnostics -->
+        <div style="display: flex; gap: 8px; margin: 4px 0;">
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 7px; color: var(--text-secondary); text-align: center; text-transform: uppercase;">GFM Attention Matrix</span>
+            <canvas id="gfm-attention-canvas" width="90" height="90" style="border: 1px solid var(--border); background: #08080a; border-radius: 2px; width: 90px; height: 90px;"></canvas>
+          </div>
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 7px; color: var(--text-secondary); text-align: center; text-transform: uppercase;">Training Loss Graph</span>
+            <canvas id="gfm-loss-canvas" width="90" height="90" style="border: 1px solid var(--border); background: #08080a; border-radius: 2px; width: 90px; height: 90px;"></canvas>
+          </div>
+        </div>
+
+        <button id="ai-train-btn" class="nlp-btn" style="background: rgba(0, 200, 255, 0.15); border-color: var(--cyan); color: var(--cyan); width: 100%; font-family: var(--font-mono); font-size: 9px; padding: 6px; border: 1px solid var(--cyan); border-radius: 3px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(0, 200, 255, 0.3)'; this.style.color='#ffffff';" onmouseout="this.style.background='rgba(0, 200, 255, 0.15)'; this.style.color='var(--cyan)';">
+          ANALYZE HISTORICAL SEISMICITY
+        </button>
+        <div id="gfm-terminal" style="display: none; border: 1px solid var(--border); background: #040406; border-radius: 3px; padding: 6px; font-family: var(--font-mono); font-size: 8px; color: var(--cyan); max-height: 120px; overflow-y: auto; white-space: pre-wrap; line-height: 1.4; box-sizing: border-box; margin-top: 4px;"></div>
+      </div>
+    </section>
+
+    <section class="panel-section" aria-labelledby="ollama-heading">
+      <h2 class="panel-heading" id="ollama-heading">LOCAL LLM PREDICTOR (OLLAMA)</h2>
+      <div class="nlp-input-group" style="border: 1px solid rgba(0, 255, 200, 0.2); padding: 10px; border-radius: 4px; background: rgba(0, 255, 200, 0.01); display: flex; flex-direction: column; gap: 8px;">
+        <div style="font-size: 9px; line-height: 1.3; color: var(--text-primary); font-family: var(--font-sans);">
+          Run local LLM reasoning (Gemma 4 12B recommended) via Ollama to pinpoint tectonic risk zones. Uses Torregosa et al. (2002) attenuation equations for ground motion prediction.
+        </div>
+        
+        <div class="range-control" style="margin: 0; display: flex; flex-direction: column; gap: 3px;">
+          <label for="ollama-host" class="range-label" style="font-size: 8px; margin: 0;">OLLAMA HOST URL</label>
+          <input type="text" id="ollama-host" value="http://localhost:11434" style="background: rgba(0,0,0,0.4); border: 1px solid var(--border); color: #ffffff; font-family: var(--font-mono); font-size: 9px; padding: 4px; border-radius: 2px; width: 100%; box-sizing: border-box;" />
+        </div>
+
+        <div style="display: flex; gap: 6px; align-items: flex-end;">
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 3px;">
+            <label for="ollama-model" class="range-label" style="font-size: 8px; margin: 0;">ACTIVE MODEL</label>
+            <select id="ollama-model" style="background: #08080a; border: 1px solid var(--border); color: #ffffff; font-family: var(--font-mono); font-size: 9px; padding: 4px; border-radius: 2px; width: 100%; box-sizing: border-box;">
+              <option value="gemma4:12b">gemma4:12b (NASA-Grade)</option>
+              <option value="gemma2:2b">gemma2:2b (Standard)</option>
+              <option value="tinyllama">tinyllama</option>
+              <option value="llama3.2:1b">llama3.2:1b</option>
+            </select>
+          </div>
+          <button id="ollama-refresh-btn" class="nlp-btn" style="padding: 4px 8px; font-size: 9px; margin-bottom: 0; height: 21px; width: auto; font-family: var(--font-mono); cursor: pointer;" title="Refresh local models list">↻ Refresh</button>
+        </div>
+
+        <label class="layer-toggle" for="ollama-mock-mode" style="margin: 2px 0; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+          <input type="checkbox" id="ollama-mock-mode" checked />
+          <span class="toggle-track" aria-hidden="true"></span>
+          <span class="toggle-label" style="font-size: 9px;">Simulation / Mock Generation</span>
+        </label>
+
+        <button id="ollama-analyze-btn" class="nlp-btn" style="background: rgba(0, 255, 200, 0.15); border-color: #00ffcc; color: #00ffcc; width: 100%; font-family: var(--font-mono); font-size: 9px; padding: 6px; border: 1px solid #00ffcc; border-radius: 3px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(0, 255, 200, 0.3)'; this.style.color='#ffffff';" onmouseout="this.style.background='rgba(0, 255, 200, 0.15)'; this.style.color='#00ffcc';">
+          RUN LLM SEISMIC ANALYSIS
+        </button>
+
+        <div id="ollama-terminal" style="display: none; border: 1px solid var(--border); background: #040406; border-radius: 3px; padding: 6px; font-family: var(--font-mono); font-size: 8px; color: #00ffcc; max-height: 120px; overflow-y: auto; white-space: pre-wrap; line-height: 1.4; box-sizing: border-box;"></div>
+      </div>
+    </section>
+
+    <section class="panel-section" aria-labelledby="nlp-heading">
+      <h2 class="panel-heading" id="nlp-heading">NLP REPORT TRIAGE</h2>
+      <div class="nlp-input-group">
+        <label for="nlp-text" class="range-label">Field Report Text:</label>
+        <textarea id="nlp-text" placeholder="e.g. Building collapse in GenSan" rows="2"></textarea>
+        
+        <div class="nlp-intensity-row">
+          <label for="nlp-peis" class="range-label">PEIS Felt Intensity:</label>
+          <select id="nlp-peis">
+            <option value="0" selected>Not Felt (PEIS I-II)</option>
+            <option value="3">Weak (PEIS III)</option>
+            <option value="4">Moderately Strong (PEIS IV)</option>
+            <option value="5">Strong (PEIS V)</option>
+            <option value="6">Very Strong (PEIS VI)</option>
+            <option value="7">Destructive (PEIS VII)</option>
+            <option value="8">Very Destructive (PEIS VIII)</option>
+            <option value="9">Devastating (PEIS IX-X)</option>
+          </select>
+        </div>
+
+        <div class="nlp-coords-row">
+          <div>
+            <label for="nlp-lat" class="range-label">Lat:</label>
+            <input type="number" id="nlp-lat" value="6.11" step="0.01" min="4.5" max="8.5" />
+          </div>
+          <div>
+            <label for="nlp-lon" class="range-label">Lon:</label>
+            <input type="number" id="nlp-lon" value="125.16" step="0.01" min="123.5" max="127.0" />
+          </div>
+        </div>
+        
+        <button id="nlp-submit-btn" class="nlp-btn">Run NLP Triage</button>
+      </div>
+    </section>
+
+    <section class="panel-section" aria-labelledby="siren-config-heading">
+      <h2 class="panel-heading" id="siren-config-heading">ALERT CONFIGURATION</h2>
+      <div class="range-control">
+        <label for="siren-mag-threshold" class="range-label">
+          Min Alarm M<sub>w</sub>: <span id="siren-mag-val" aria-live="polite">5.0</span>
+        </label>
+        <input type="range" id="siren-mag-threshold" min="3.0" max="8.0" step="0.5" value="5.0"
+               aria-valuemin="3.0" aria-valuemax="8.0" aria-valuenow="5.0" />
+      </div>
+      <div class="range-control">
+        <label for="siren-dist-threshold" class="range-label">
+          Max Alarm Dist: <span id="siren-dist-val" aria-live="polite">100</span> km
+        </label>
+        <input type="range" id="siren-dist-threshold" min="20" max="500" step="10" value="100"
+               aria-valuemin="20" aria-valuemax="500" aria-valuenow="100" />
+      </div>
+    </section>
+
+    <section class="panel-section" aria-labelledby="siren-heading">
+      <h2 class="panel-heading" id="siren-heading">CRITICAL AUDIO TRIGGER</h2>
+      <div id="siren-status-panel" class="status-green" role="status" aria-live="polite">MONITORING ACTIVE // STANDBY</div>
+    </section>
+
   </aside>
 
   <!-- ══════════════════════════════════════════════════════════════
@@ -178,6 +452,10 @@
         <div class="telem-row"><span class="telem-key">Vs30</span>        <span class="telem-val" id="t-vs30">— m/s</span></div>
         <div class="telem-row"><span class="telem-key">PGA</span>         <span class="telem-val" id="t-pga">— g</span></div>
         <div class="telem-row"><span class="telem-key">SOURCE</span>      <span class="telem-val" id="t-src">—</span></div>
+        <div id="t-intensities-row" style="display: none; flex-direction: column; gap: 4px; border-top: 1px solid rgba(0, 200, 255, 0.1); margin-top: 6px; padding-top: 6px;">
+          <span class="telem-key" style="text-align: left; margin-bottom: 2px;">REPORTED INTENSITIES</span>
+          <div id="t-intensities" style="color: var(--cyan); font-size: 8px; line-height: 1.3; max-height: 80px; overflow-y: auto; white-space: pre-wrap;">—</div>
+        </div>
       </div>
     </section>
 
@@ -193,6 +471,20 @@
       </p>
     </section>
 
+    <!-- Coulomb Stress Inversion Analysis -->
+    <section class="panel-section" aria-labelledby="coulomb-heading">
+      <h2 class="panel-heading" id="coulomb-heading">COULOMB STRESS ANALYSIS</h2>
+      <div id="coulomb-analysis-display" aria-live="polite" style="font-family: var(--font-mono); font-size: 9px; line-height: 1.4; display: flex; flex-direction: column; gap: 6px;">
+        <div class="telem-row"><span class="telem-key">COULOMB LOAD</span><span class="telem-val" id="coulomb-load-val">— bars</span></div>
+        <div class="telem-row"><span class="telem-key">STRESS STATUS</span><span class="telem-val" id="coulomb-status-val">—</span></div>
+        <div class="telem-row"><span class="telem-key">COUPLING EFF.</span><span class="telem-val" id="coulomb-coupling-val">—</span></div>
+      </div>
+      <div style="margin-top: 10px; font-family: var(--font-sans); font-size: 8px; color: var(--text-secondary); margin-bottom: 4px; font-weight: bold; letter-spacing: 0.1em; text-transform: uppercase;">AUTOMATED AI TRIAGE REPORT:</div>
+      <div id="seismic-analysis-output" style="border: 1px solid var(--border); background: rgba(0, 0, 0, 0.45); border-radius: 3px; padding: 8px; font-family: var(--font-sans); font-size: 9px; line-height: 1.4; color: var(--text-primary); max-height: 160px; overflow-y: auto; white-space: pre-wrap; word-break: break-word;">
+        Awaiting stress simulation trigger...
+      </div>
+    </section>
+
     <!-- Live earthquake feed -->
     <section class="panel-section" aria-labelledby="live-feed-heading">
       <div class="panel-heading-row">
@@ -206,10 +498,252 @@
       </div>
     </section>
 
-    <!-- Volcano status -->
+    <!-- Real-time Seismograph Visualizer -->
+    <section class="panel-section" aria-labelledby="seismo-heading">
+      <h2 class="panel-heading" id="seismo-heading">SEISMIC WAVEFORM</h2>
+      <div class="seismo-wrap">
+        <canvas id="seismo-canvas" width="300" height="85" role="img" aria-label="Real-time seismic wave monitor"></canvas>
+      </div>
+    </section>
+
+    <!-- Live incident stream -->
+    <section class="panel-section" aria-labelledby="incident-heading">
+      <h2 class="panel-heading" id="incident-heading">LIVE INCIDENT STREAM</h2>
+      <div id="incident-feed-root" role="log" aria-label="Incoming field report ticker">
+        <div class="feed-empty">No active field reports</div>
+      </div>
+    </section>
+
+    <!-- LINDOL Responders Leaderboard -->
+    <section class="panel-section" aria-labelledby="leaderboard-heading">
+      <h2 class="panel-heading" id="leaderboard-heading">RESPONDERS LEADERBOARD</h2>
+      <div class="leaderboard-card">
+        <div id="leaderboard-list" class="leaderboard-list">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Volcanic status -->
     <section class="panel-section" aria-labelledby="volcano-heading">
       <h2 class="panel-heading" id="volcano-heading">VOLCANIC STATUS</h2>
       <div id="volcano-list" role="list" aria-label="Active volcano status list"></div>
+    </section>
+
+    <!-- Seismic Training Simulation -->
+    <section class="panel-section" aria-labelledby="simulation-heading">
+      <h2 class="panel-heading" id="simulation-heading">TRAINING SIMULATION</h2>
+      <div class="safety-card" style="border-color: rgba(255, 26, 68, 0.4); background: rgba(255, 26, 68, 0.02); display: flex; flex-direction: column; gap: 8px;">
+        <div class="safety-title" style="color: var(--red); text-shadow: 0 0 6px rgba(255, 26, 68, 0.3);">DYNAMIC SEISMIC SIMULATOR</div>
+        
+        <div class="nlp-coords-row">
+          <div>
+            <label for="sim-lat" class="range-label">Latitude:</label>
+            <input type="number" id="sim-lat" value="5.50" step="0.01" min="4.0" max="21.5" style="background: rgba(0,0,0,0.4); border: 1px solid var(--border); color: #ffffff; font-family: var(--font-mono); font-size: 9px; padding: 4px; border-radius: 2px; width: 100%; box-sizing: border-box;" />
+          </div>
+          <div>
+            <label for="sim-lon" class="range-label">Longitude:</label>
+            <input type="number" id="sim-lon" value="125.00" step="0.01" min="116.0" max="130.0" style="background: rgba(0,0,0,0.4); border: 1px solid var(--border); color: #ffffff; font-family: var(--font-mono); font-size: 9px; padding: 4px; border-radius: 2px; width: 100%; box-sizing: border-box;" />
+          </div>
+        </div>
+
+        <div class="nlp-coords-row">
+          <div>
+            <label for="sim-mag" class="range-label">Magnitude (Mw):</label>
+            <input type="number" id="sim-mag" value="8.3" step="0.1" min="1.0" max="9.5" style="background: rgba(0,0,0,0.4); border: 1px solid var(--border); color: #ffffff; font-family: var(--font-mono); font-size: 9px; padding: 4px; border-radius: 2px; width: 100%; box-sizing: border-box;" />
+          </div>
+          <div>
+            <label for="sim-depth" class="range-label">Depth (km):</label>
+            <input type="number" id="sim-depth" value="25.0" step="1.0" min="0.0" max="700.0" style="background: rgba(0,0,0,0.4); border: 1px solid var(--border); color: #ffffff; font-family: var(--font-mono); font-size: 9px; padding: 4px; border-radius: 2px; width: 100%; box-sizing: border-box;" />
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 3px;">
+          <label for="sim-preset" class="range-label">Focal Mechanism Preset:</label>
+          <select id="sim-preset" style="background: #08080a; border: 1px solid var(--border); color: #ffffff; font-family: var(--font-mono); font-size: 9px; padding: 4px; border-radius: 2px; width: 100%; box-sizing: border-box; cursor: pointer;">
+            <option value="thrust" selected>Thrust (Cotabato Trench / Subduction)</option>
+            <option value="strike-slip">Strike-Slip (Philippine Fault System)</option>
+            <option value="normal">Normal Faulting (Tension / Pull-Apart)</option>
+            <option value="custom">Custom Geometry</option>
+          </select>
+        </div>
+
+        <div class="nlp-coords-row" id="sim-geometry-row">
+          <div>
+            <label for="sim-strike" class="range-label">Strike:</label>
+            <input type="number" id="sim-strike" value="345" step="1" min="0" max="360" style="background: rgba(0,0,0,0.4); border: 1px solid var(--border); color: #ffffff; font-family: var(--font-mono); font-size: 9px; padding: 4px; border-radius: 2px; width: 100%; box-sizing: border-box;" />
+          </div>
+          <div>
+            <label for="sim-dip" class="range-label">Dip:</label>
+            <input type="number" id="sim-dip" value="25" step="1" min="0" max="90" style="background: rgba(0,0,0,0.4); border: 1px solid var(--border); color: #ffffff; font-family: var(--font-mono); font-size: 9px; padding: 4px; border-radius: 2px; width: 100%; box-sizing: border-box;" />
+          </div>
+          <div>
+            <label for="sim-rake" class="range-label">Rake:</label>
+            <input type="number" id="sim-rake" value="90" step="1" min="-180" max="180" style="background: rgba(0,0,0,0.4); border: 1px solid var(--border); color: #ffffff; font-family: var(--font-mono); font-size: 9px; padding: 4px; border-radius: 2px; width: 100%; box-sizing: border-box;" />
+          </div>
+        </div>
+
+        <button id="btn-run-simulation" class="nlp-btn" style="background: rgba(255, 26, 68, 0.15); border-color: var(--red); color: var(--red); cursor: pointer; width: 100%; transition: background 0.15s, color 0.15s; font-family: var(--font-mono); font-size: 9px; padding: 6px; border: 1px dashed var(--red); border-radius: 3px; margin-top: 4px;" onmouseover="this.style.background='rgba(255, 26, 68, 0.3)'; this.style.color='#ffffff';" onmouseout="this.style.background='rgba(255, 26, 68, 0.15)'; this.style.color='var(--red)';">
+          RUN SEISMIC SIMULATION
+        </button>
+      </div>
+    </section>
+
+    <!-- NASA-Grade Seismic Prediction Engine -->
+    <section class="panel-section" aria-labelledby="prediction-heading">
+      <h2 class="panel-heading" id="prediction-heading">NASA-GRADE PREDICTION ENGINE</h2>
+      <div class="safety-card" style="border-color: rgba(0, 200, 255, 0.4); background: rgba(0, 200, 255, 0.02); display: flex; flex-direction: column; gap: 8px;">
+        <div class="safety-title" style="color: var(--cyan); text-shadow: 0 0 6px rgba(0, 200, 255, 0.3);">MONTE CARLO PSHA + GEMMA 4 12B</div>
+        <div style="font-size: 8px; line-height: 1.3; color: var(--text-secondary); font-family: var(--font-mono);">
+          1M+ simulations using Torregosa et al. (2002) seismogenic zone data,
+          fault parameters, and attenuation equations. Powered by HuggingFace GFM
+          and Gemma 4 12B for multi-scenario earthquake prediction.
+        </div>
+
+        <div class="nlp-coords-row">
+          <div>
+            <label for="predict-lat" class="range-label">Latitude:</label>
+            <input type="number" id="predict-lat" value="6.11" step="0.01" min="4.0" max="21.5" style="background: rgba(0,0,0,0.4); border: 1px solid var(--border); color: #ffffff; font-family: var(--font-mono); font-size: 9px; padding: 4px; border-radius: 2px; width: 100%; box-sizing: border-box;" />
+          </div>
+          <div>
+            <label for="predict-lon" class="range-label">Longitude:</label>
+            <input type="number" id="predict-lon" value="125.17" step="0.01" min="116.0" max="130.0" style="background: rgba(0,0,0,0.4); border: 1px solid var(--border); color: #ffffff; font-family: var(--font-mono); font-size: 9px; padding: 4px; border-radius: 2px; width: 100%; box-sizing: border-box;" />
+          </div>
+        </div>
+
+        <div class="nlp-coords-row">
+          <div>
+            <label for="predict-depth" class="range-label">Depth (km):</label>
+            <input type="number" id="predict-depth" value="25" step="1" min="0" max="700" style="background: rgba(0,0,0,0.4); border: 1px solid var(--border); color: #ffffff; font-family: var(--font-mono); font-size: 9px; padding: 4px; border-radius: 2px; width: 100%; box-sizing: border-box;" />
+          </div>
+          <div>
+            <label for="predict-sims" class="range-label">Simulations:</label>
+            <select id="predict-sims" style="background: #08080a; border: 1px solid var(--border); color: #ffffff; font-family: var(--font-mono); font-size: 9px; padding: 4px; border-radius: 2px; width: 100%; box-sizing: border-box; cursor: pointer;">
+              <option value="100000">100K (Fast)</option>
+              <option value="500000">500K (Standard)</option>
+              <option value="1000000" selected>1M (NASA-Grade)</option>
+              <option value="5000000">5M (Ultra-Precision)</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 3px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 8px; color: var(--text-secondary); font-family: var(--font-mono);">SIMULATION PROGRESS</span>
+            <span id="predict-pct" style="font-size: 8px; color: var(--cyan); font-family: var(--font-mono);">0%</span>
+          </div>
+          <div style="width: 100%; height: 4px; background: rgba(0,0,0,0.4); border-radius: 2px; overflow: hidden;">
+            <div id="predict-progress" style="display: none; width: 0%; height: 100%; background: linear-gradient(90deg, var(--cyan), #00ffcc); border-radius: 2px; transition: width 0.3s;"></div>
+          </div>
+        </div>
+
+        <button id="predict-btn" class="nlp-btn" style="background: rgba(0, 200, 255, 0.15); border-color: var(--cyan); color: var(--cyan); cursor: pointer; width: 100%; transition: background 0.15s, color 0.15s; font-family: var(--font-mono); font-size: 9px; padding: 6px; border: 1px solid var(--cyan); border-radius: 3px; margin-top: 4px;" onmouseover="this.style.background='rgba(0, 200, 255, 0.3)'; this.style.color='#ffffff';" onmouseout="this.style.background='rgba(0, 200, 255, 0.15)'; this.style.color='var(--cyan)';">
+          RUN NASA-GRADE PREDICTION
+        </button>
+
+        <div id="predict-terminal" style="display: none; border: 1px solid var(--border); background: #040406; border-radius: 3px; padding: 6px; font-family: var(--font-mono); font-size: 8px; color: var(--cyan); max-height: 200px; overflow-y: auto; white-space: pre-wrap; line-height: 1.4; box-sizing: border-box; margin-top: 4px;"></div>
+
+        <div style="font-size: 7px; color: var(--text-dim); font-family: var(--font-mono); margin-top: 2px; line-height: 1.3;">
+          Data: Torregosa, Sugito & Nojima (2002). "Seismic Hazard and Microzoning of the Philippines."
+          JSCE Structural Engineering, Vol. 19, No. 710/2002.
+          Model: thinkonward/geophysical-foundation-model (HuggingFace) + Gemma 4 12B (Ollama).
+        </div>
+      </div>
+    </section>
+
+    <!-- LINDOL Safety & Readiness -->
+    <!-- Civic Infrastructure Monitoring Dashboard -->
+    <section class="panel-section" aria-labelledby="civic-heading" style="max-height: 400px; overflow-y: auto;">
+      <h2 class="panel-heading" id="civic-heading">CIVIC INFRASTRUCTURE MONITOR</h2>
+
+      <!-- Advisory Banner -->
+      <div id="civic-advisory-banner" style="display: none; border-left: 3px solid #ffaa00; background: rgba(255, 170, 0, 0.05); padding: 6px 8px; border-radius: 0 3px 3px 0; margin-bottom: 8px; font-family: var(--font-mono); align-items: center; gap: 6px;"></div>
+
+      <!-- City Selector -->
+      <div style="margin-bottom: 6px;">
+        <select id="civic-city-select" style="background: #08080a; border: 1px solid var(--border); color: #ffffff; font-family: var(--font-mono); font-size: 9px; padding: 4px; border-radius: 2px; width: 100%; box-sizing: border-box;">
+          <option value="General Santos City">General Santos City</option>
+          <option value="Koronadal City">Koronadal City</option>
+          <option value="Davao City">Davao City</option>
+        </select>
+      </div>
+
+      <!-- Tabs -->
+      <div style="display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 6px;">
+        <button class="civic-tab active" data-tab="overview" style="flex: 1; background: rgba(0, 200, 255, 0.1); border: none; border-bottom: 2px solid var(--cyan); color: var(--cyan); font-family: var(--font-mono); font-size: 8px; padding: 4px; cursor: pointer;">Overview</button>
+        <button class="civic-tab" data-tab="utilities" style="flex: 1; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--text-secondary); font-family: var(--font-mono); font-size: 8px; padding: 4px; cursor: pointer;">⚡ Utilities</button>
+        <button class="civic-tab" data-tab="business" style="flex: 1; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--text-secondary); font-family: var(--font-mono); font-size: 8px; padding: 4px; cursor: pointer;">🏢 Business</button>
+      </div>
+
+      <!-- Status Toggle (Utilities tab) -->
+      <div id="civic-status-toggles" style="display: flex; gap: 4px; margin-bottom: 6px;">
+        <button class="civic-status-toggle active" data-field="water" style="font-size: 7px; padding: 2px 6px; border: 1px solid var(--border); border-radius: 2px; background: rgba(0, 100, 255, 0.15); color: #00aaff; cursor: pointer; font-family: var(--font-mono);">💧 Water</button>
+        <button class="civic-status-toggle" data-field="power" style="font-size: 7px; padding: 2px 6px; border: 1px solid var(--border); border-radius: 2px; background: transparent; color: var(--text-secondary); cursor: pointer; font-family: var(--font-mono);">⚡ Power</button>
+        <button class="civic-status-toggle" data-field="hazard" style="font-size: 7px; padding: 2px 6px; border: 1px solid var(--border); border-radius: 2px; background: transparent; color: var(--text-secondary); cursor: pointer; font-family: var(--font-mono);">⚠ Hazard</button>
+      </div>
+
+      <!-- Tab Content -->
+      <div id="civic-tab-content" style="min-height: 80px;"></div>
+
+      <!-- Status Bar -->
+      <div id="civic-status-bar" style="border-top: 1px solid var(--border); padding-top: 4px; margin-top: 6px; font-size: 7px; color: var(--text-dim); font-family: var(--font-mono); display: flex; flex-wrap: wrap; gap: 8px;"></div>
+    </section>
+
+    <!-- Bayesian Deep Learning Prediction -->
+    <section class="panel-section" aria-labelledby="bayesian-heading">
+      <h2 class="panel-heading" id="bayesian-heading">BAYESIAN DL PREDICTION</h2>
+      <div style="border: 1px solid rgba(128, 0, 255, 0.3); padding: 8px; border-radius: 4px; background: rgba(128, 0, 255, 0.02); display: flex; flex-direction: column; gap: 6px;">
+        <div style="font-size: 8px; line-height: 1.3; color: var(--text-secondary); font-family: var(--font-mono);">
+          Monte Carlo Dropout Bayesian Neural Network. Provides uncertainty-quantified predictions with 95% confidence intervals.
+          Based on Gal & Ghahramani (2016) "Dropout as a Bayesian Approximation."
+        </div>
+
+        <div class="nlp-coords-row">
+          <div>
+            <label for="bayesian-lat" class="range-label">Lat:</label>
+            <input type="number" id="bayesian-lat" value="6.11" step="0.01" min="4.0" max="21.5" style="background: rgba(0,0,0,0.4); border: 1px solid var(--border); color: #ffffff; font-family: var(--font-mono); font-size: 9px; padding: 4px; border-radius: 2px; width: 100%; box-sizing: border-box;" />
+          </div>
+          <div>
+            <label for="bayesian-lon" class="range-label">Lon:</label>
+            <input type="number" id="bayesian-lon" value="125.17" step="0.01" min="116.0" max="130.0" style="background: rgba(0,0,0,0.4); border: 1px solid var(--border); color: #ffffff; font-family: var(--font-mono); font-size: 9px; padding: 4px; border-radius: 2px; width: 100%; box-sizing: border-box;" />
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 3px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 8px; color: var(--text-secondary); font-family: var(--font-mono);">COMPUTATION</span>
+            <span style="font-size: 8px; color: #8000ff; font-family: var(--font-mono);">MC Dropout</span>
+          </div>
+          <div style="width: 100%; height: 3px; background: rgba(0,0,0,0.4); border-radius: 2px; overflow: hidden;">
+            <div id="bayesian-progress" style="display: none; width: 0%; height: 100%; background: linear-gradient(90deg, #8000ff, #ff00ff); border-radius: 2px; transition: width 0.1s;"></div>
+          </div>
+        </div>
+
+        <button id="bayesian-predict-btn" style="background: rgba(128, 0, 255, 0.15); border-color: #8000ff; color: #8000ff; cursor: pointer; width: 100%; font-family: var(--font-mono); font-size: 9px; padding: 6px; border: 1px solid #8000ff; border-radius: 3px; transition: all 0.15s;" onmouseover="this.style.background='rgba(128, 0, 255, 0.3)'; this.style.color='#ffffff';" onmouseout="this.style.background='rgba(128, 0, 255, 0.15)'; this.style.color='#8000ff';">
+          RUN BAYESIAN DL PREDICTION
+        </button>
+
+        <div id="bayesian-terminal" style="display: none; border: 1px solid var(--border); background: #040406; border-radius: 3px; padding: 6px; font-family: var(--font-mono); font-size: 8px; color: #8000ff; max-height: 160px; overflow-y: auto; white-space: pre-wrap; line-height: 1.4; box-sizing: border-box; margin-top: 4px;"></div>
+      </div>
+    </section>
+
+    <section class="panel-section" aria-labelledby="safety-heading">
+      <h2 class="panel-heading" id="safety-heading">LINDOL SAFETY GUIDE</h2>
+      <div class="safety-card">
+        <div class="safety-title">DROP, COVER, HOLD ON!</div>
+        <ul class="safety-steps">
+          <li><strong>DROP</strong> to your hands and knees.</li>
+          <li><strong>COVER</strong> your head & neck under a sturdy table.</li>
+          <li><strong>HOLD ON</strong> until the shaking stops.</li>
+        </ul>
+        <div class="safety-contacts-title">EMERGENCY HOTLINES</div>
+        <div class="safety-contacts">
+          <div class="contact-row"><span>Gensan CDRRMO</span> <span class="contact-val">0917-720-8332</span></div>
+          <div class="contact-row"><span>Davao CDRRMO</span>  <span class="contact-val">911</span></div>
+          <div class="contact-row"><span>Tagum CDRRMO</span>  <span class="contact-val">0917-805-4357</span></div>
+          <div class="contact-row"><span>OCD Region XII</span><span class="contact-val">(083) 553-2994</span></div>
+        </div>
+      </div>
     </section>
 
   </aside>
@@ -225,8 +759,8 @@
     </div>
     <div class="timeline-slider-wrap">
       <span class="timeline-epoch" aria-hidden="true">1990</span>
-      <input type="range" id="timeline-scrubber" min="1990" max="2026" step="0.1" value="2026"
-             aria-label="Timeline year" aria-valuemin="1990" aria-valuemax="2026" aria-valuenow="2026" />
+      <input type="range" id="timeline-scrubber" min="1990" max="2026.5" step="0.1" value="2026.5"
+             aria-label="Timeline year" aria-valuemin="1990" aria-valuemax="2026.5" aria-valuenow="2026.5" />
       <span class="timeline-epoch" aria-hidden="true">2026</span>
     </div>
     <div class="timeline-readout">
@@ -244,6 +778,35 @@
       </select>
     </div>
   </footer>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       FLOATING SEISMIC ANALYSIS CARD (YouTube Live Stream style)
+  ══════════════════════════════════════════════════════════════ -->
+  <div id="floating-analysis-card" style="display: none; position: absolute; bottom: 85px; right: 340px; width: 320px; background: rgba(5, 8, 12, 0.85); backdrop-filter: blur(10px); border-left: 3px solid #ff4500; border-top: 1px solid rgba(255,255,255,0.08); border-right: 1px solid rgba(255,255,255,0.04); border-bottom: 1px solid rgba(255,255,255,0.04); padding: 15px; border-radius: 0 4px 4px 0; z-index: 10; box-shadow: 0 10px 30px rgba(0,0,0,0.5); font-family: var(--font-sans); color: #ffffff; box-sizing: border-box; transition: all 0.3s ease;">
+    <div style="font-family: var(--font-mono); font-size: 8px; color: var(--text-secondary); letter-spacing: 2px; margin-bottom: 6px; text-transform: uppercase;">SEISMIC ANALYSIS</div>
+    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+      <span id="fl-mag" style="font-size: 28px; font-weight: 800; color: #ff1a44; font-family: var(--font-sans); letter-spacing: -0.5px;">M --</span>
+      <span id="fl-coords" style="font-family: var(--font-mono); font-size: 11px; color: #ffffff;">--</span>
+    </div>
+    
+    <div style="display: flex; gap: 15px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px; margin-bottom: 8px; font-family: var(--font-mono); font-size: 9px; color: var(--text-secondary);">
+      <div>DEPTH: <span id="fl-depth" style="color: #ffffff; font-weight: bold;">-- km</span></div>
+      <div>TIME: <span id="fl-time" style="color: #ffffff; font-weight: bold;">--</span></div>
+    </div>
+    
+    <div id="fl-desc" style="font-size: 10px; line-height: 1.45; color: rgba(255,255,255,0.85); text-align: justify; font-weight: 400; max-height: 120px; overflow-y: auto; padding-right: 4px;">
+      Evaluating tectonic rupture vectors...
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       FLOATING STATS FOOTER (YouTube Live Stream style)
+  ══════════════════════════════════════════════════════════════ -->
+  <div id="floating-stats-hud" style="position: absolute; bottom: 85px; left: 340px; background: rgba(5, 8, 12, 0.75); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.06); border-radius: 3px; padding: 6px 12px; display: flex; gap: 20px; z-index: 10; font-family: var(--font-mono); font-size: 9px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); box-sizing: border-box;">
+    <div><span style="color: var(--text-secondary);">EVENTS (30D):</span> <span id="stat-events" style="color: var(--cyan); font-weight: bold;">--</span></div>
+    <div><span style="color: var(--text-secondary);">LARGEST Mw:</span> <span id="stat-largest" style="color: var(--red); font-weight: bold;">--</span></div>
+    <div><span style="color: var(--text-secondary);">VOLCANOES ALERT >= 2:</span> <span id="stat-volcanoes" style="color: var(--amber); font-weight: bold;">--</span></div>
+  </div>
 
   <!-- ══════════════════════════════════════════════════════════════
        HOVER TOOLTIP
@@ -298,6 +861,46 @@
     </div>
   </div>
 
+  <!-- Inline Emergency Escalation Modal -->
+  <div id="escalation-modal" class="modal-overlay" aria-hidden="true" hidden>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">🚨 EMERGENCY TASK ESCALATION</h3>
+        <button id="modal-close" class="modal-close-btn" aria-label="Close escalation dialog">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-instruction">Select the target regional agency to dispatch alert data:</p>
+        <div class="escalate-target-group">
+          <div class="escalate-target">
+            <span class="target-name">Gensan CDRRMO</span>
+            <span class="target-hotline">0917-720-8332</span>
+            <a href="tel:09177208332" class="call-btn">📞 CALL</a>
+          </div>
+          <div class="escalate-target">
+            <span class="target-name">Davao CDRRMO</span>
+            <span class="target-hotline">911</span>
+            <a href="tel:911" class="call-btn">📞 CALL</a>
+          </div>
+          <div class="escalate-target">
+            <span class="target-name">Tagum CDRRMO</span>
+            <span class="target-hotline">0917-805-4357</span>
+            <a href="tel:09178054357" class="call-btn">📞 CALL</a>
+          </div>
+          <div class="escalate-target">
+            <span class="target-name">OCD Region XII</span>
+            <span class="target-hotline">(083) 553-2994</span>
+            <a href="tel:0835532994" class="call-btn">📞 CALL</a>
+          </div>
+        </div>
+        <div class="message-draft-box">
+          <label for="escalate-msg-draft">Alert Message Transmission Payload:</label>
+          <textarea id="escalate-msg-draft" readonly rows="3"></textarea>
+        </div>
+        <button id="btn-transmit-alert" class="transmit-btn">⚡ TRANSMIT ALERT DATA</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ══════════════════════════════════════════════════════════════
        LOADING OVERLAY
   ══════════════════════════════════════════════════════════════ -->
@@ -312,12 +915,13 @@
       <p class="loader-attribution">
         Data: <a href="https://earthquake.phivolcs.dost.gov.ph/" target="_blank" rel="noopener">PHIVOLCS</a>
         · <a href="https://earthquake.usgs.gov/fdsnws/event/1/" target="_blank" rel="noopener">USGS FDSNWS</a>
+        · Model: <a href="https://huggingface.co/thinkonward/geophysical-foundation-model" target="_blank" rel="noopener">GFM (HuggingFace)</a>
         · Map: <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>
         / <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OSM</a>
+        <br/>Seismic hazard data: Torregosa, Sugito & Nojima (2002), JSCE Vol.19 No.710/2002
       </p>
     </div>
   </div>
-
-
+
 </body>
 </html>

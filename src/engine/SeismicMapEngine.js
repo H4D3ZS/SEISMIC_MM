@@ -66,7 +66,22 @@ export class SeismicMapEngine {
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping     = true;
     this.controls.dampingFactor     = 0.05;
-    this.controls.screenSpacePanning = false;
+    this.controls.screenSpacePanning = true;
+    this.controls.enablePan         = true;
+
+    // LEFT click pans the map (freescroll), RIGHT click rotates (orbits) perspective
+    this.controls.mouseButtons = {
+      LEFT:   THREE.MOUSE.PAN,
+      MIDDLE: THREE.MOUSE.DOLLY,
+      RIGHT:  THREE.MOUSE.ROTATE
+    };
+
+    // Touch support: One finger pans/scrolls, two fingers zoom and rotate
+    this.controls.touches = {
+      ONE:   THREE.TOUCH.PAN,
+      TWO:   THREE.TOUCH.DOLLY_ROTATE
+    };
+
     // Polar angle is measured from +Z (up): keep the camera above the horizon
     this.controls.maxPolarAngle     = Math.PI / 2 - 0.05;
     this.controls.minDistance       = 4;

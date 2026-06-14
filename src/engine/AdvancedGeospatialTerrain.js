@@ -55,11 +55,23 @@ const MAX_DETAIL_TILES = 36;
 // ── Raster sources (XYZ, keyless) ─────────────────────────────────────────────
 
 export const TILE_SOURCES = {
+  /** Google Satellite — high-resolution satellite, keyless, very fast. */
+  google_satellite: {
+    url: (z, x, y) =>
+      `https://mt1.google.com/vt/lyrs=s&x=${x}&y=${y}&z=${z}`,
+    attribution: 'Imagery © Google',
+  },
   /** Esri World Imagery — high-resolution satellite, no API key. */
   esri_satellite: {
     url: (z, x, y) =>
-      `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`,
+      `https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`,
     attribution: 'Imagery © Esri, Maxar, Earthstar Geographics',
+  },
+  /** Mapbox Satellite — premium colorful satellite, requires token. */
+  mapbox_satellite: {
+    url: (z, x, y, token) =>
+      `https://api.mapbox.com/v4/mapbox.satellite/${z}/${x}/${y}@2x.png?access_token=${token}`,
+    attribution: '© Mapbox © OpenStreetMap',
   },
   /** CartoDB Dark Matter — fallback / low-bandwidth mode. */
   carto_dark: {
@@ -95,20 +107,63 @@ const PING_FRAG = /* glsl */`
   }
 `;
 
+// Shaders for Satellite Map Tiles
+const TILE_VERT = `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const TILE_FRAG = `
+  uniform sampler2D uMap;
+  uniform vec3 uTint;
+  uniform float uDesaturate;
+  uniform float uEmergencyActive;
+  varying vec2 vUv;
+  void main() {
+    vec4 texColor = texture2D(uMap, vUv);
+    
+    // Grayscale
+    float gray = dot(texColor.rgb, vec3(0.299, 0.587, 0.114));
+    vec3 base = mix(texColor.rgb, vec3(gray), uDesaturate);
+    
+    // Navy blue tinting
+    vec3 finalColor = base * uTint;
+    
+    // Emergency wave highlight (overall dark-red emergency warning alert tone)
+    if (uEmergencyActive > 0.5) {
+      finalColor = mix(finalColor, vec3(0.7, 0.08, 0.08) * base, 0.22);
+    }
+    
+    gl_FragColor = vec4(finalColor, 1.0);
+  }
+`;
+
 // ── AdvancedGeospatialTerrain ─────────────────────────────────────────────────
 
 export class AdvancedGeospatialTerrain {
   /**
    * @param {import('./SeismicMapEngine.js').SeismicMapEngine} engine
    * @param {object} [opts]
-   * @param {string} [opts.tileStyle='esri_satellite']
+   * @param {string} [opts.tileStyle='google_satellite']
    */
   constructor(engine, opts = {}) {
     this.engine = engine;
     this.textureLoader = new THREE.TextureLoader();
     this.textureLoader.setCrossOrigin('anonymous');
 
-    this._styleName = opts.tileStyle in TILE_SOURCES ? opts.tileStyle : 'esri_satellite';
+    const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN?.trim();
+    if (mapboxToken) {
+      this._styleName = 'mapbox_satellite';
+      this._mapboxToken = mapboxToken;
+      console.info("[CISV Map] Mapbox satellite token found. Loading Mapbox Satellite tiles.");
+    } else {
+      this._styleName = 'google_satellite';
+      this._mapboxToken = null;
+      console.info("[CISV Map] No Mapbox token found. Defaulting to Google Satellite tiles.");
+    }
 
     /** @type {Map<string, THREE.Mesh>} */
     this._detailTiles = new Map();
@@ -122,6 +177,13 @@ export class AdvancedGeospatialTerrain {
 
     /** @type {Array<{mesh: THREE.Mesh, speed: number}>} */
     this.pings = [];
+
+    // Map shaders configuration: No desaturation and white tint by default for fully colorful satellite map
+    this._mapUniforms = {
+      uTint: { value: new THREE.Color(0xffffff) },
+      uDesaturate: { value: 0.0 },
+      uEmergencyActive: { value: 0.0 }
+    };
 
     this._addCoordinateGrid();
     this._buildBaseMosaic();
@@ -164,13 +226,41 @@ export class AdvancedGeospatialTerrain {
     const sw = this._toWorld(b.latMin, b.lonMin);
     const ne = this._toWorld(b.latMax, b.lonMax);
 
-    const texture = this.textureLoader.load(TILE_SOURCES[this._styleName].url(zoom, x, y));
+    // Create a local canvas texture as a placeholder/fallback
+    const fallbackTexture = createProceduralTileTexture(zoom, x, y);
+    const initialDesaturate = 0.0; // Show full tactical colors for fallback
+
+    const material = new THREE.ShaderMaterial({
+      vertexShader: TILE_VERT,
+      fragmentShader: TILE_FRAG,
+      uniforms: {
+        uMap: { value: fallbackTexture },
+        uTint: this._mapUniforms.uTint,
+        uDesaturate: { value: initialDesaturate },
+        uEmergencyActive: this._mapUniforms.uEmergencyActive
+      },
+      depthWrite: false
+    });
+
+    // Load the satellite texture asynchronously
+    const texture = this.textureLoader.load(
+      TILE_SOURCES[this._styleName].url(zoom, x, y, this._mapboxToken),
+      (loadedTex) => {
+        // Once successfully loaded, replace the uniform in the material
+        material.uniforms.uMap.value = loadedTex;
+        material.uniforms.uDesaturate.value = this._mapUniforms.uDesaturate.value;
+      },
+      undefined,
+      (err) => {
+        console.warn(`[CISV Map] Failed to load tile Z${zoom} X${x} Y${y}. Using procedural tactical fallback.`);
+      }
+    );
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.anisotropy = 4;
 
     const mesh = new THREE.Mesh(
       new THREE.PlaneGeometry(ne.x - sw.x, ne.y - sw.y),
-      new THREE.MeshBasicMaterial({ map: texture, depthWrite: false })
+      material
     );
     mesh.position.set((sw.x + ne.x) / 2, (sw.y + ne.y) / 2, zOrder);
     mesh.renderOrder = zOrder === Z_BASE_TILES ? -2 : -1;
@@ -299,6 +389,11 @@ export class AdvancedGeospatialTerrain {
     mesh.position.set(x, y, 0.05);
     this.engine.scene.add(mesh);
     this.pings.push({ mesh, speed: 0.85 });
+
+    // Enable emergency warning highlight on base tiles
+    if (mag >= 5.0) {
+      this._mapUniforms.uEmergencyActive.value = 1.0;
+    }
   }
 
   _tickPings(delta) {
@@ -311,6 +406,11 @@ export class AdvancedGeospatialTerrain {
         p.mesh.material.dispose();
         this.pings.splice(i, 1);
       }
+    }
+
+    // Reset emergency map shader highlights if no pings are active
+    if (this.pings.length === 0) {
+      this._mapUniforms.uEmergencyActive.value = 0.0;
     }
   }
 
@@ -362,3 +462,47 @@ export class AdvancedGeospatialTerrain {
     this._attribDiv?.remove();
   }
 }
+
+// ── Procedural Fallback Texture Generator ──────────────────────────────────────
+
+function createProceduralTileTexture(zoom, x, y) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+
+  // Fill background - deep navy blue
+  ctx.fillStyle = '#060a14';
+  ctx.fillRect(0, 0, 256, 256);
+
+  // Draw thin digital grid border
+  ctx.strokeStyle = 'rgba(0, 255, 204, 0.18)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(0, 0, 256, 256);
+
+  // Draw minor grid lines inside the tile
+  ctx.strokeStyle = 'rgba(0, 255, 204, 0.05)';
+  ctx.beginPath();
+  for (let i = 32; i < 256; i += 32) {
+    ctx.moveTo(i, 0); ctx.lineTo(i, 256);
+    ctx.moveTo(0, i); ctx.lineTo(256, i);
+  }
+  ctx.stroke();
+
+  // Draw center crosshair
+  ctx.strokeStyle = 'rgba(0, 255, 204, 0.3)';
+  ctx.beginPath();
+  ctx.moveTo(128, 122); ctx.lineTo(128, 134);
+  ctx.moveTo(122, 128); ctx.lineTo(134, 128);
+  ctx.stroke();
+
+  // Draw coordinate labels in corners
+  ctx.fillStyle = 'rgba(0, 255, 204, 0.55)';
+  ctx.font = '9px monospace';
+  ctx.fillText(`Z${zoom} X${x} Y${y}`, 10, 20);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+

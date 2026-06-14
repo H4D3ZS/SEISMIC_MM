@@ -1,15 +1,22 @@
 {
   "name": "cyber-ifrit-seismic-vision",
-  "version": "1.0.0",
-  "description": "CISV — Interactive Geodynamic Command & Simulation Map — Philippine Archipelago",
+  "version": "2.0.0",
+  "description": "CISV — NASA-Grade Seismic Monitoring + GFM + Bayesian DL + Civic Infrastructure",
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:all": "node dev-all.js",
+    "dev:gfm": "python gfm_server.py",
+    "dev:gfm:offline": "python tools/gfm_offline_server.py",
+    "dev:ollama": "ollama serve",
     "build": "vite build",
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "gfm:download": "python -c \"from huggingface_hub import snapshot_download; snapshot_download('thinkonward/geophysical-foundation-model', local_dir='gfm-weights')\"",
+    "gfm:pull": "ollama pull gemma4:12b",
+    "setup": "npm install && pip install flask flask-cors torch pillow huggingface_hub"
   },
   "dependencies": {
     "three": "^0.165.0"

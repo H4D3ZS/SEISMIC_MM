@@ -10,6 +10,11 @@
 
 import * as THREE from 'three';
 
+const LAT_ANCHOR    = 12.0;
+const LON_ANCHOR    = 122.0;
+const SPATIAL_SCALE = 6.0;
+const DEPTH_SCALE   = 0.25;
+
 export class RaycasterController {
   /**
    * @param {import('../engine/SeismicMapEngine.js').SeismicMapEngine} engine
@@ -74,25 +79,14 @@ export class RaycasterController {
     if (event.button !== 0) return; // Left click only
 
     const hit = this._castRay();
-    if (!hit) {
-      // Volcano click — ping its location so the operator sees the PDZ context
-      const volcano = this._castVolcanoRay();
-      if (volcano) {
-        this._ui.triggerRadarPing(volcano.latitude, volcano.longitude, 5.0);
-      }
-      return;
-    }
-    {
+    if (hit) {
       const rec = this._getRecord(hit.instanceId);
       // Populate the standard right-panel telemetry readout
       this._ui.selectEvent(hit.instanceId);
 
       if (rec) {
-        // Fire radar ping for any selected event
-        this._ui.triggerRadarPing(rec.lat, rec.lon, rec.mag);
-
         // For hazardous events (≥Mw 5.0) open the situational media panel.
-        // In production this payload would arrive via WebSocket.  Here we
+        // In production this payload would arrive via WebSocket. Here we
         // simulate the report so the UI path is fully exercised.
         if (rec.mag >= 5.0) {
           const simulatedReport = _buildSimulatedReport(hit.instanceId, rec);
@@ -101,6 +95,21 @@ export class RaycasterController {
           this._ui.openMediaPanel(hit.instanceId, null);
         }
       }
+      return;
+    }
+
+    // Check volcano click
+    const volcano = this._castVolcanoRay();
+    if (volcano) {
+      this._ui.selectVolcano(volcano);
+      return;
+    }
+
+    // Check empty terrain click
+    const terrainHit = this._castTerrainRay();
+    if (terrainHit) {
+      const coords = this._getWorldCoords(terrainHit.point);
+      this._ui.selectLocation(coords.lat, coords.lon);
     }
   }
 
@@ -148,6 +157,34 @@ export class RaycasterController {
   }
 
   /**
+   * Cast a ray and return the first intersection on the terrain base tiles.
+   * @returns {THREE.Intersection|null}
+   * @private
+   */
+  _castTerrainRay() {
+    const terrainGroup = this._engine.registry.get('satellite_base');
+    if (!terrainGroup) return null;
+
+    this._raycaster.setFromCamera(this._pointer, this._engine.camera);
+    const hits = this._raycaster.intersectObject(terrainGroup, true);
+
+    return hits.length > 0 ? hits[0] : null;
+  }
+
+  /**
+   * Translate 3D world coordinates back to lat/lon degrees.
+   * @param {THREE.Vector3} point
+   * @returns {{lat: number, lon: number}}
+   * @private
+   */
+  _getWorldCoords(point) {
+    return {
+      lat: LAT_ANCHOR + point.y / SPATIAL_SCALE,
+      lon: LON_ANCHOR + point.x / SPATIAL_SCALE,
+    };
+  }
+
+  /**
    * Look up the seismic record for a given instance index.
    * @param {number} index
    * @returns {{ lat, lon, depth, mag }|null}
@@ -168,11 +205,6 @@ export class RaycasterController {
     const matrix = new THREE.Matrix4();
     mesh.getMatrixAt(index, matrix);
     const pos = new THREE.Vector3().setFromMatrixPosition(matrix);
-
-    const LAT_ANCHOR   = 12.0;
-    const LON_ANCHOR   = 122.0;
-    const SPATIAL_SCALE = 6.0;
-    const DEPTH_SCALE   = 0.25;
 
     return {
       lat:   LAT_ANCHOR  + pos.y / SPATIAL_SCALE,

@@ -24,6 +24,13 @@ const TILE_ORIGINS  = [
   // Esri World Imagery — primary CISV satellite base map
   'server.arcgisonline.com',
   'services.arcgisonline.com',
+  // Google Maps Satellite tiles
+  'mt0.google.com',
+  'mt1.google.com',
+  'mt2.google.com',
+  'mt3.google.com',
+  // Mapbox Satellite
+  'api.mapbox.com',
   // CartoDB Dark Matter — fallback / low-bandwidth style
   'basemaps.cartocdn.com',
   'cartodb-basemaps',

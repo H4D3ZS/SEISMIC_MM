@@ -9,12 +9,10 @@
  *    encode spatial threat context so an operator woken at midnight knows
  *    "close and powerful" vs "powerful but far" before reading a single
  *    number.
- *  - Browser autoplay policy: the AudioContext unlocks on the first user
- *    gesture; alerts that fire before unlock queue one pending siren.
- *  - Inside the Tauri shell the native rodio siren (hardware-level, survives
- *    webview suspension) is ALSO triggered for critical events.
- * ─────────────────────────────────────────────────────────────────────────────
+ *  - Browser autoplay policy: the AudioContext unlocks on the first  * ─────────────────────────────────────────────────────────────────────────────
  */
+
+import { CrossPlatformHardwareBridge } from './bridge.js';
 
 /** Default operator location — General Santos City (configurable). */
 const DEFAULT_USER_LOCATION = { lat: 6.1164, lon: 125.1716 };
@@ -40,14 +38,11 @@ export class TelemetryBridge {
     /** @type {Set<(source: string, ok: boolean, detail: string) => void>} */
     this._statusSubscribers = new Set();
 
-    this.audioCtx = null;
-    this._pendingSiren = null;
-    this._sirenActive = false;
-    this._armAudioUnlock();
+    this.hardwareBridge = new CrossPlatformHardwareBridge();
 
     // ── Worker ──────────────────────────────────────────────────────────
     this._worker = new Worker(
-      new URL('../workers/telemetry-worker.js', import.meta.url),
+      new URL('../workers/stream.worker.js', import.meta.url),
       { type: 'module' }
     );
     this._worker.onmessage = ({ data }) => this._route(data);
@@ -57,7 +52,7 @@ export class TelemetryBridge {
       precursorEndpoints: opts.precursorEndpoints ?? null,
     });
 
-    console.info('[CISV] TelemetryBridge online — USGS 30 s stream, PH bbox 4–21°N / 116–127°E.');
+    console.info('[CISV] TelemetryBridge online — Web Worker binary ingestion initialized.');
   }
 
   // ── Subscription API ────────────────────────────────────────────────────
@@ -68,9 +63,24 @@ export class TelemetryBridge {
 
   _route(msg) {
     switch (msg?.type) {
-      case 'seismic-event':
-        this._eventSubscribers.forEach(cb => cb(msg.event));
-        this.executeContextualSiren(msg.event, this.userLocation.lat, this.userLocation.lon);
+      case 'seismic-event-bin':
+        const view = new Float32Array(msg.buffer);
+        const event = {
+          id: msg.id,
+          magnitude: view[3],
+          place: msg.place,
+          latitude: view[0],
+          longitude: view[1],
+          depth: view[2],
+          time_ms: msg.time_ms,
+          x: view[4],
+          y: view[5],
+          z: view[6],
+          source: msg.source,
+          situational_report: msg.situational_report
+        };
+        this._eventSubscribers.forEach(cb => cb(event));
+        this.executeContextualSiren(event, this.userLocation.lat, this.userLocation.lon);
         break;
       case 'precursor':
         this._precursorSubscribers.forEach(cb => cb(msg.channel, msg.value));
@@ -97,111 +107,34 @@ export class TelemetryBridge {
   // ── Contextual siren ────────────────────────────────────────────────────
 
   /**
-   * Threat-contextual audio alert. Pitch band + oscillation speed encode
-   * proximity and intensity.
+   * Threat-contextual audio alert. Proximity dictates the siren type.
    * @param {{magnitude:number, latitude:number, longitude:number}} eventData
    */
   executeContextualSiren(eventData, userLat, userLon) {
-    if (eventData.magnitude < 5.0) return;
+    const magInput  = document.getElementById('siren-mag-threshold');
+    const distInput = document.getElementById('siren-dist-threshold');
+
+    const minMag  = magInput  ? parseFloat(magInput.value)  : 5.0;
+    const maxDist = distInput ? parseFloat(distInput.value) : 100.0;
+
+    if (eventData.magnitude < minMag) return;
 
     const distance = this.calculateDistance(
       userLat, userLon, eventData.latitude, eventData.longitude
     );
 
-    if (distance < 100) {
-      // CRITICAL THREAT — close and powerful: high-pitch rapid oscillation.
-      this._requestSiren(880, 1200, 0.2, true);
-    } else {
-      // DISTANT THREAT — powerful but far: heavy bass rumble denoting
-      // long-period structural rolling waves.
-      this._requestSiren(110, 220, 0.8, false);
-    }
+    if (distance > maxDist) return;
 
-    // Inside the Tauri shell, also fire the hardware siren — it works even
-    // if the webview tab is suspended or audio is muted at the DOM level.
-    if (distance < 100 && window.__TAURI__?.invoke) {
-      window.__TAURI__.invoke('trigger_native_siren').catch(() => {});
-    }
+    // Call unified hardware bridge to play siren signal
+    this.hardwareBridge.fireEmergencySystemSiren(eventData.magnitude);
 
     console.warn(
       `[CISV] SIREN — Mw ${eventData.magnitude.toFixed(1)} at ${distance.toFixed(0)} km ` +
-      `(${distance < 100 ? 'CRITICAL' : 'DISTANT'} threat profile)`
+      `(Threat profile matched: Mag >= ${minMag}, Dist <= ${maxDist})`
     );
   }
 
-  _requestSiren(freqLow, freqHigh, period, rapid) {
-    if (!this.audioCtx || this.audioCtx.state === 'suspended') {
-      // Autoplay-locked: queue the most recent request; it plays on unlock.
-      this._pendingSiren = [freqLow, freqHigh, period, rapid];
-      this.audioCtx?.resume().catch(() => {});
-      return;
-    }
-    this.playSirenSignal(freqLow, freqHigh, period, rapid);
-  }
-
-  /**
-   * Dynamic Frequency Modulator: oscillator sweeps freqLow↔freqHigh every
-   * `period` seconds for ~8 s. `rapid` adds a square-ish urgency timbre.
-   */
-  playSirenSignal(freqLow, freqHigh, period, rapid) {
-    if (this._sirenActive) return; // don't stack overlapping sirens
-    this._sirenActive = true;
-
-    const ctx = this.audioCtx;
-    const now = ctx.currentTime;
-    const DURATION = 8.0;
-
-    const osc  = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = rapid ? 'square' : 'sine';
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-
-    // Frequency sweep schedule — sawtooth ramp between the two pitches
-    osc.frequency.setValueAtTime(freqLow, now);
-    const cycles = Math.floor(DURATION / period);
-    for (let i = 0; i < cycles; i++) {
-      const t = now + i * period;
-      osc.frequency.linearRampToValueAtTime(freqHigh, t + period * 0.5);
-      osc.frequency.linearRampToValueAtTime(freqLow,  t + period);
-    }
-
-    // Envelope: fast attack, sustain, release
-    const peak = rapid ? 0.6 : 0.45;
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(peak, now + 0.08);
-    gain.gain.setValueAtTime(peak, now + DURATION - 0.6);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + DURATION);
-
-    osc.start(now);
-    osc.stop(now + DURATION);
-    osc.onended = () => {
-      osc.disconnect();
-      gain.disconnect();
-      this._sirenActive = false;
-    };
-  }
-
-  // ── Audio unlock & location persistence ─────────────────────────────────
-
-  _armAudioUnlock() {
-    const unlock = () => {
-      if (!this.audioCtx) {
-        const Ctx = window.AudioContext || window.webkitAudioContext;
-        this.audioCtx = new Ctx();
-      }
-      this.audioCtx.resume().then(() => {
-        if (this._pendingSiren) {
-          this.playSirenSignal(...this._pendingSiren);
-          this._pendingSiren = null;
-        }
-      }).catch(() => {});
-      window.removeEventListener('pointerdown', unlock);
-      window.removeEventListener('keydown', unlock);
-    };
-    window.addEventListener('pointerdown', unlock);
-    window.addEventListener('keydown', unlock);
-  }
+  // ── Location persistence ────────────────────────────────────────────────
 
   setUserLocation(lat, lon) {
     this.userLocation = { lat, lon };
@@ -224,6 +157,6 @@ export class TelemetryBridge {
   dispose() {
     this._worker.postMessage({ type: 'stop' });
     this._worker.terminate();
-    this.audioCtx?.close().catch(() => {});
+    this.hardwareBridge.audioContext?.close().catch(() => {});
   }
 }
