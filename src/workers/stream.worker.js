@@ -22,7 +22,7 @@ let usgsPollMs = 30_000;
 let usgsTimer  = null;
 let precursorTimer = null;
 let precursorEndpoints = null;
-let webSocketUrl = 'wss://api.cyberifrit.net/seismic/stream';
+let webSocketUrl = null;
 let ws = null;
 let wsReconnectTimeout = null;
 let wsFailCount = 0;
@@ -71,6 +71,7 @@ function emitBinaryEvent(id, place, time_ms, source, lat, lon, depth, magnitude,
 // ── WebSocket Ingestion ───────────────────────────────────────────────────────
 
 function connectWebSocket() {
+  if (!webSocketUrl) return;
   if (ws) {
     try { ws.close(); } catch (e) {}
   }
