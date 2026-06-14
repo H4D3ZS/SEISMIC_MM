@@ -51,7 +51,7 @@ export class LocalNLPTriageEngine {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'tinyllama:1.1b',
+          model: 'gemma2:2b',
           messages: [
             {
               role: 'system',

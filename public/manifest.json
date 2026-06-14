@@ -1,0 +1,25 @@
+{
+  "name": "CISV — Seismic Movement Monitoring",
+  "short_name": "CISV",
+  "description": "NASA-Grade Philippine Seismic Monitoring Dashboard with real-time USGS+PHIVOLCS data, Monte Carlo PSHA, Bayesian DL, and QuakeNet prediction.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020408",
+  "theme_color": "#00d4ff",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["weather", "utilities", "science"],
+  "lang": "en",
+  "scope": "/"
+}

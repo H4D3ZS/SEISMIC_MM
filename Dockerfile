@@ -20,7 +20,7 @@ COPY . .
 RUN npm install && npm run build
 
 # Pull a small model for fast inference
-RUN ollama pull tinyllama:1.1b &
+RUN ollama pull gemma2:2b &
 
 EXPOSE 3000
 
