@@ -427,14 +427,31 @@ async function boot() {
 
   engine.onFPSUpdate(fps => ui.updateFPS(fps));
 
-  // ── 9. Background polling ────────────────────────────────────────────────
+  // ── 9. Background polling — every 30 seconds for near-real-time detection ──
+  const POLL_INTERVAL = 30_000; // 30 seconds
+  let lastEventCount = catalogResult?.count ?? 0;
+
   setInterval(async () => {
     console.info('[CISV] Background poll: refreshing live catalog…');
     ui.setFeedStatus('UPDATING…', 'pending');
 
     const fresh = await _loadCatalog();
-    catalogResult = fresh; // keep the shared reference current for predictors
+    const newCount = fresh.count;
+    const newEvents = newCount - lastEventCount;
 
+    if (newEvents > 0) {
+      console.info(`[CISV] NEW EVENTS DETECTED: +${newEvents} (${newCount} total)`);
+      // Trigger radar ping for new events
+      const latestEvents = fresh.events.slice(0, newEvents);
+      for (const ev of latestEvents) {
+        geospatialTerrain.triggerPing(ev.lat, ev.lon, ev.mag);
+        hazardZones.evaluateEvent(ev);
+        seismographInstance?.spike(ev.mag);
+        civicDashboard.onSeismicEvent(ev);
+      }
+    }
+
+    catalogResult = fresh;
     catalogRenderer.renderBinarySeismicCatalog(fresh.buffer, fresh.pgaBuffer, fresh.yearBuffer);
     ui.updateCatalog(fresh.buffer, fresh.events);
     ui.updateEventCount(fresh.count);
@@ -444,8 +461,14 @@ async function boot() {
     ui.refreshLiveFeedList(fresh.events);
     civicDashboard.setCatalog(fresh.events, fresh.sources);
 
-    console.info(`[CISV] Poll complete — ${fresh.count} events.`);
-  }, LIVE_POLL_MS);
+    // Ingest new events into QuakeNet grid
+    if (newEvents > 0) {
+      quakeNet.ingestEvents(fresh.events.slice(0, newEvents));
+    }
+
+    lastEventCount = newCount;
+    console.info(`[CISV] Poll complete — ${newCount} events (${newEvents > 0 ? '+' + newEvents + ' new' : 'no change'}).`);
+  }, POLL_INTERVAL);
 
   // ── 9a. Live telemetry bridge (worker: USGS 30 s stream + precursors) ───
 
