@@ -38,9 +38,50 @@ import { GFMVisualizer }             from './engine/GFMVisualizer.js';
 import { GeodynamicLayerRenderer }   from './engine/GeodynamicLayerRenderer.js';
 import { NasagradeSeismicSimulator } from './engine/simulation_engine.js';
 import { EarthquakePredictor } from './engine/EarthquakePredictor.js';
+import { HistoricalSeismicityAnalyzer } from './engine/HistoricalSeismicityAnalyzer.js';
 import { PredictionImprover } from './engine/PredictionImprover.js';
 import { BarangayRenderer } from './engine/BarangayRenderer.js';
 import { CivicDashboard } from './engine/CivicDashboard.js';
+import { SEISMOGENIC_ZONES, ACTIVE_FAULTS } from './data/ResearchPaperData.js';
+
+// ── Helper: PRNG for deterministic simulation seeds ──────────────────────────
+function _mulberry32(seed) {
+  return function () {
+    let t = (seed += 0x6D2B79F5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// ── Helper: Cluster events into spatial hotspots ─────────────────────────────
+function _clusterEvents(events, radiusKm = 50) {
+  const R = 6371;
+  const used = new Set();
+  const clusters = [];
+  for (let i = 0; i < events.length; i++) {
+    if (used.has(i)) continue;
+    const ev = events[i];
+    const cluster = { lat: ev.lat, lon: ev.lon, count: 1, maxMag: ev.mag, totalMag: ev.mag, avgDepth: ev.depth || 10 };
+    used.add(i);
+    for (let j = i + 1; j < events.length; j++) {
+      if (used.has(j)) continue;
+      const d = Math.sqrt((ev.lat - events[j].lat) ** 2 + (ev.lon - events[j].lon) ** 2) * 111;
+      if (d < radiusKm) {
+        used.add(j);
+        cluster.count++;
+        cluster.totalMag += events[j].mag;
+        if (events[j].mag > cluster.maxMag) cluster.maxMag = events[j].mag;
+        cluster.avgDepth = (cluster.avgDepth * (cluster.count - 1) + (events[j].depth || 10)) / cluster.count;
+      }
+    }
+    cluster.lat = ev.lat;
+    cluster.lon = ev.lon;
+    clusters.push(cluster);
+  }
+  clusters.sort((a, b) => b.count - a.count);
+  return clusters;
+}
 
 // ── LINDOL Inspired Seismograph Waveform Engine ──────────────────────────────
 class Seismograph {
@@ -250,9 +291,11 @@ async function boot() {
 
   const simulator = new NasagradeSeismicSimulator(engine);
   const predictor = new EarthquakePredictor();
+  const seismicityAnalyzer = new HistoricalSeismicityAnalyzer();
   const improver = new PredictionImprover();
   const barangayRenderer = new BarangayRenderer(engine);
   const civicDashboard = new CivicDashboard(barangayRenderer, gfmVisualizer);
+  civicDashboard.setCatalog(catalogResult.events, catalogResult.sources);
 
   const ui = new UIController({
     catalogRenderer,
@@ -307,12 +350,32 @@ async function boot() {
     submitBtn.disabled = true;
     submitBtn.textContent = 'Processing…';
 
+    const resultEl = document.getElementById('nlp-result');
     try {
-      await nlpTriage.processIncomingFieldText(text, { lat, lon }, peis);
+      const res = await nlpTriage.processIncomingFieldText(text, { lat, lon }, peis);
       addIncidentToFeed(text, lat, lon, peis);
+
+      // Show the REAL classification result so the user sees output.
+      if (resultEl) {
+        const r = res || { source: 'unknown', category: 'unknown', severity: 0, matched: [] };
+        const sevColor = r.severity >= 4 ? 'var(--red, #ff1a44)' : r.severity >= 2 ? 'var(--amber, #ffaa00)' : 'var(--green, #00ff88)';
+        resultEl.style.display = 'block';
+        resultEl.style.color = sevColor;
+        resultEl.textContent =
+          `TRIAGE RESULT (${r.source})\n` +
+          `  Category : ${r.category}\n` +
+          `  Severity : ${r.severity}/5${r.confidence != null ? `  (confidence ${(r.confidence * 100).toFixed(0)}%)` : ''}\n` +
+          (r.matched && r.matched.length ? `  Hazards  : ${r.matched.join(', ')}\n` : '') +
+          `  Mapped   : ${r.plotted ? 'YES — marker plotted at ' + lat.toFixed(2) + ', ' + lon.toFixed(2) : 'no (below threshold)'}`;
+      }
       textEl.value = ''; // Clear input on success
     } catch (err) {
       console.error('[NLP UI] Triage failed:', err);
+      if (resultEl) {
+        resultEl.style.display = 'block';
+        resultEl.style.color = 'var(--amber, #ffaa00)';
+        resultEl.textContent = `Triage error: ${err.message}`;
+      }
     } finally {
       submitBtn.disabled = false;
       submitBtn.textContent = 'Run NLP Triage';
@@ -356,6 +419,7 @@ async function boot() {
     ui.setFeedStatus('UPDATING…', 'pending');
 
     const fresh = await _loadCatalog();
+    catalogResult = fresh; // keep the shared reference current for predictors
 
     catalogRenderer.renderBinarySeismicCatalog(fresh.buffer, fresh.pgaBuffer, fresh.yearBuffer);
     ui.updateCatalog(fresh.buffer, fresh.events);
@@ -364,6 +428,7 @@ async function boot() {
     ui.setLastFetchTime(new Date());
     ui.setFeedStatus('LIVE', 'live');
     ui.refreshLiveFeedList(fresh.events);
+    civicDashboard.setCatalog(fresh.events, fresh.sources);
 
     console.info(`[CISV] Poll complete — ${fresh.count} events.`);
   }, LIVE_POLL_MS);
@@ -474,53 +539,182 @@ async function boot() {
   const predictProgress = document.getElementById('predict-progress');
 
   predictBtn?.addEventListener('click', async () => {
-    const lat = parseFloat(document.getElementById('predict-lat')?.value || '6.11');
-    const lon = parseFloat(document.getElementById('predict-lon')?.value || '125.17');
-    const depth = parseFloat(document.getElementById('predict-depth')?.value || '25');
     const sims = parseInt(document.getElementById('predict-sims')?.value || '1000000', 10);
+    const top10El = document.getElementById('predict-top10');
+    const predictBtnEl = predictBtn;
 
-    predictBtn.disabled = true;
-    predictBtn.textContent = 'RUNNING SIMULATION...';
+    predictBtnEl.disabled = true;
+    predictBtnEl.textContent = 'ANALYZING ALL SEISMIC ZONES...';
     predictTerminal.style.display = 'block';
     predictTerminal.textContent = '';
     predictProgress.style.display = 'block';
+    if (top10El) { top10El.style.display = 'block'; top10El.textContent = ''; }
 
     try {
-      predictor.simulator.numSimulations = sims;
-      const result = await predictor.predict({
-        lat, lon, depth,
-        onProgress: (pct, msg) => {
-          if (predictProgress) predictProgress.style.width = `${pct}%`;
-          predictTerminal.textContent += `\n${msg}`;
-          predictTerminal.scrollTop = predictTerminal.scrollHeight;
-        },
-      });
+      // Build candidate locations from real data sources
+      const candidates = [];
+      const seen = new Set();
 
-      const report = predictor.formatReport(result);
-      predictTerminal.textContent = report;
+      // 1. Cluster recent USGS + PHIVOLCS events into hotspots
+      const events = catalogResult?.events ?? [];
+      if (events.length > 0) {
+        const clusters = _clusterEvents(events, 50); // 50km radius clusters
+        for (const cluster of clusters.slice(0, 15)) {
+          const key = `${cluster.lat.toFixed(2)}_${cluster.lon.toFixed(2)}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            candidates.push({
+              lat: cluster.lat, lon: cluster.lon,
+              source: 'EVENT_CLUSTER',
+              maxMag: cluster.maxMag,
+              eventCount: cluster.count,
+              avgDepth: cluster.avgDepth,
+            });
+          }
+        }
+      }
+
+      // 2. Seismogenic zone centers
+      const zones = SEISMOGENIC_ZONES || [];
+      for (const z of zones) {
+        const key = `${z.lat.toFixed(2)}_${z.lon.toFixed(2)}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          candidates.push({
+            lat: z.lat, lon: z.lon,
+            source: 'ZONE_CENTER',
+            zoneName: z.name,
+            maxMag: z.maxMag,
+            occRate: z.occRate,
+          });
+        }
+      }
+
+      // 3. Active fault centroids
+      const faults = ACTIVE_FAULTS || [];
+      for (const f of faults) {
+        if (f.lat && f.lon) {
+          const key = `${f.lat.toFixed(2)}_${f.lon.toFixed(2)}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            candidates.push({
+              lat: f.lat, lon: f.lon,
+              source: 'FAULT_CENTROID',
+              faultName: f.name,
+              maxMag: f.Mf,
+              slipRate: f.slipRate,
+            });
+          }
+        }
+      }
+
+      predictTerminal.textContent = `[ANALYSIS] Found ${candidates.length} candidate locations from ${events.length} events + ${zones.length} zones + ${faults.length} faults\n`;
       predictTerminal.scrollTop = predictTerminal.scrollHeight;
 
-      // Update GFM attention visualization
-      gfmVisualizer.setLinks(lat, lon, true);
+      if (candidates.length === 0) {
+        predictTerminal.textContent += '[ANALYSIS] No candidates found. Check data feeds.\n';
+        predictBtnEl.disabled = false;
+        predictBtnEl.textContent = 'RUN PREDICTION — ANALYZE ALL SEISMIC ZONES';
+        return;
+      }
 
-      // Update AI status indicators
+      // Run Monte Carlo on top candidates (sorted by existing risk)
+      const ranked = [];
+      const simsPerLocation = Math.max(50000, Math.floor(sims / Math.min(candidates.length, 20)));
+      const maxLocations = Math.min(candidates.length, 20);
+
+      for (let i = 0; i < maxLocations; i++) {
+        const c = candidates[i];
+        const pct = ((i + 1) / maxLocations) * 100;
+        predictTerminal.textContent += `\n[MC-PSHA ${i+1}/${maxLocations}] ${c.lat.toFixed(2)}°N ${c.lon.toFixed(2)}°E (${c.source}) — ${simsPerLocation.toLocaleString()} sims...`;
+        predictTerminal.scrollTop = predictTerminal.scrollHeight;
+        if (predictProgress) predictProgress.style.width = `${pct}%`;
+        const pctEl = document.getElementById('predict-pct');
+        if (pctEl) pctEl.textContent = `${Math.round(pct)}%`;
+
+        try {
+          predictor.simulator.numSimulations = simsPerLocation;
+          predictor.simulator.rng = _mulberry32(Date.now() + i * 7919);
+          const result = await predictor.predict({
+            lat: c.lat, lon: c.lon, depth: c.avgDepth || 25,
+            recentEvents: events,
+            onProgress: () => {},
+          });
+
+          const mcSum = result.mcResult?.summary || {};
+          const annualEx = result.mcResult?.annualExceedance || {};
+          const timing = result.timing || {};
+          const riskScore = (mcSum.hazardConsistentMag || 0) * 0.3
+            + (annualEx.PGA_100gal || 0) * 100 * 0.3
+            + (parseFloat(timing.overdueRatio) || 0) * 0.2
+            + (c.maxMag || 0) * 0.2;
+
+          ranked.push({
+            ...c,
+            hazardMag: mcSum.hazardConsistentMag || 0,
+            meanPGA: mcSum.meanPGA_g || 0,
+            meanMag: mcSum.meanMagnitude || 0,
+            exceedance100gal: annualEx.PGA_100gal || 0,
+            overdueRatio: parseFloat(timing.overdueRatio) || 0,
+            isOverdue: timing.isOverdue || false,
+            riskScore: parseFloat(riskScore.toFixed(3)),
+            zonesAnalyzed: mcSum.zonesAnalyzed || 0,
+            faultsAnalyzed: mcSum.faultsAnalyzed || 0,
+          });
+        } catch (err) {
+          predictTerminal.textContent += ` ERROR: ${err.message}`;
+        }
+      }
+
+      // Sort by risk score descending, take top 10
+      ranked.sort((a, b) => b.riskScore - a.riskScore);
+      const top10 = ranked.slice(0, 10);
+
+      // Display top 10
+      if (top10El) {
+        top10El.textContent = '';
+        top10.forEach((loc, i) => {
+          const riskColor = loc.riskScore > 3 ? '#ff1a44' : loc.riskScore > 1.5 ? '#ffaa00' : '#00ff88';
+          const label = loc.zoneName || loc.faultName || loc.source;
+          top10El.textContent += `[${i+1}] ${loc.lat.toFixed(2)}°N ${loc.lon.toFixed(2)}°E  Risk: ${loc.riskScore.toFixed(2)}  HCM: M${loc.hazardMag.toFixed(1)}  ${label}\n`;
+        });
+        top10El.scrollTop = 0;
+      }
+
+      // Summary
+      predictTerminal.textContent += `\n\n═══════════════════════════════════════════`;
+      predictTerminal.textContent += `\nANALYSIS COMPLETE — ${ranked.length} locations analyzed`;
+      predictTerminal.textContent += `\nTop 10 highest-risk locations ranked by combined`;
+      predictTerminal.textContent += `\n(hazard mag × exceedance × strain × zone magnitude)`;
+      predictTerminal.textContent += `\n═══════════════════════════════════════════\n`;
+      predictTerminal.scrollTop = predictTerminal.scrollHeight;
+
+      // Update AI status
       const statusEl = document.getElementById('ai-model-status');
       if (statusEl) {
-        statusEl.textContent = 'ACTIVE (1M SIMS)';
+        statusEl.textContent = `ACTIVE — TOP ${top10.length} RANKED`;
         statusEl.style.color = 'var(--green)';
       }
-      const predLocEl = document.getElementById('ai-predicted-loc');
-      if (predLocEl) predLocEl.textContent = `${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E`;
-      const coulombEl = document.getElementById('ai-coulomb-load');
-      if (coulombEl) coulombEl.textContent = `${result.mcResult.summary.meanPGA_g.toFixed(4)}g mean PGA`;
 
-      addPointsToHades(500);
+      // Fly to #1 risk location
+      if (top10.length > 0) {
+        const top = top10[0];
+        gfmVisualizer.setLinks(top.lat, top.lon, true);
+        const LAT_ANCHOR = 12.0, LON_ANCHOR = 122.0, SPATIAL_SCALE = 6.0;
+        const x = (top.lon - LON_ANCHOR) * SPATIAL_SCALE;
+        const y = (top.lat - LAT_ANCHOR) * SPATIAL_SCALE;
+        if (engine?.controls) {
+          engine.controls.target.set(x, y, 0);
+          engine.camera.position.set(x, y - 12, 10);
+          engine.controls.update();
+        }
+      }
     } catch (err) {
       predictTerminal.textContent += `\nERROR: ${err.message}`;
       console.error('[CISV] Prediction failed:', err);
     } finally {
-      predictBtn.disabled = false;
-      predictBtn.textContent = 'RUN NASA-GRADE PREDICTION';
+      predictBtnEl.disabled = false;
+      predictBtnEl.textContent = 'RUN PREDICTION — ANALYZE ALL SEISMIC ZONES';
     }
   });
 
@@ -539,6 +733,23 @@ async function boot() {
     const statusEl = document.getElementById('ai-model-status');
     if (statusEl) { statusEl.textContent = 'ANALYZING...'; statusEl.style.color = 'var(--cyan)'; }
 
+    // ── REAL historical seismicity analysis on the actual catalog ────────────
+    // This is what the button label promises. Runs first, always, from live data.
+    try {
+      const evs = catalogResult?.events ?? [];
+      const srcs = catalogResult?.sources ?? [];
+      const analysis = seismicityAnalyzer.analyze(evs, { sources: srcs });
+      gfmTerminal.textContent = seismicityAnalyzer.formatReport(analysis) + '\n';
+      if (statusEl) {
+        statusEl.textContent = analysis.isSynthetic ? 'ANALYZED (SYNTHETIC DATA)' : 'ANALYZED (REAL CATALOG)';
+        statusEl.style.color = analysis.isSynthetic ? 'var(--amber)' : 'var(--green)';
+      }
+    } catch (e) {
+      gfmTerminal.textContent = `Historical analysis error: ${e.message}\n`;
+      console.error('[CISV] Historical analysis failed:', e);
+    }
+
+    // ── Optional: GFM model inference (only if a server is reachable) ─────────
     try {
       // Capture canvas snapshot
       const canvas = document.querySelector('#canvas-container canvas');
@@ -560,7 +771,7 @@ async function boot() {
 
       const result = await response.json();
       const analysis = result.analysis || result.predictions || JSON.stringify(result, null, 2);
-      gfmTerminal.textContent = analysis;
+      gfmTerminal.textContent += `\n─── GFM MODEL INFERENCE (thinkonward/geophysical-foundation-model) ───\n${analysis}`;
 
       if (statusEl) { statusEl.textContent = 'ANALYSIS COMPLETE'; statusEl.style.color = 'var(--green)'; }
 
@@ -582,8 +793,8 @@ async function boot() {
       if (coordMatch) {
         focusLat = parseFloat(coordMatch[1]);
         focusLon = parseFloat(coordMatch[2]);
-      } else if (seismicEvents && seismicEvents.length > 0) {
-        const latest = seismicEvents[seismicEvents.length - 1];
+      } else if (catalogResult?.events && catalogResult.events.length > 0) {
+        const latest = catalogResult.events[catalogResult.events.length - 1];
         focusLat = latest.lat;
         focusLon = latest.lon;
       }
@@ -592,8 +803,7 @@ async function boot() {
       }
 
     } catch (err) {
-      gfmTerminal.textContent = `GFM ANALYSIS FAILED: ${err.message}\n\nEnsure the GFM server is running:\n  python gfm_server.py\n  or\n  python tools/gfm_offline_server.py`;
-      if (statusEl) { statusEl.textContent = 'OFFLINE (STANDBY)'; statusEl.style.color = 'var(--amber)'; }
+      gfmTerminal.textContent += `\n─── GFM model offline (optional): ${err.message} ───\n(Historical analysis above is from the real catalog and does not need the GFM server.)`;
     }
   });
 
