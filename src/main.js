@@ -39,6 +39,7 @@ import { GeodynamicLayerRenderer }   from './engine/GeodynamicLayerRenderer.js';
 import { NasagradeSeismicSimulator } from './engine/simulation_engine.js';
 import { EarthquakePredictor } from './engine/EarthquakePredictor.js';
 import { QuakeNetPredictor } from './engine/QuakeNetPredictor.js';
+import { MonteCarloSimulator } from './engine/MonteCarloSimulator.js';
 import { HistoricalSeismicityAnalyzer } from './engine/HistoricalSeismicityAnalyzer.js';
 import { PredictionImprover } from './engine/PredictionImprover.js';
 import { BarangayRenderer } from './engine/BarangayRenderer.js';
@@ -803,12 +804,42 @@ async function boot() {
       const srcs = catalogResult?.sources ?? [];
       const analysis = seismicityAnalyzer.analyze(evs, { sources: srcs });
       gfmTerminal.textContent = seismicityAnalyzer.formatReport(analysis) + '\n';
+
+      // Run Monte Carlo simulation on the catalog statistics
+      gfmTerminal.textContent += '\n[RUNNING MC-PSHA] Generating 100K simulations from catalog b-value...\n';
+      gfmTerminal.scrollTop = gfmTerminal.scrollHeight;
+
+      const mcSims = new MonteCarloSimulator({ numSimulations: 100_000, seed: Date.now() % 100000 });
+
+      // Pick the most active location from the catalog
+      const evClusters = _clusterEvents(evs, 50);
+      const topCluster = evClusters[0] || { lat: 12.0, lon: 122.0 };
+
+      const mcResult = await mcSims.runSimulation({
+        lat: topCluster.lat, lon: topCluster.lon, depth: 25,
+        progressCb: (pct, msg) => {
+          gfmTerminal.textContent = gfmTerminal.textContent.replace(/\[MC-PSHA\].*?\n/g, '');
+          gfmTerminal.textContent += `[MC-PSHA] ${msg}\n`;
+          gfmTerminal.scrollTop = gfmTerminal.scrollHeight;
+        }
+      });
+
+      // Display MC results
+      const s = mcResult.summary;
+      const ex = mcResult.annualExceedance;
+      gfmTerminal.textContent += `\n═══ MC-PSHA RESULTS (${topCluster.lat.toFixed(2)}°N, ${topCluster.lon.toFixed(2)}°E) ═══\n`;
+      gfmTerminal.textContent += `Hazard-Consistent Mag (500yr): M${s.hazardConsistentMag.toFixed(2)}\n`;
+      gfmTerminal.textContent += `Mean Magnitude: M${s.meanMagnitude.toFixed(2)} | Max: M${s.maxMagnitude.toFixed(2)}\n`;
+      gfmTerminal.textContent += `Mean PGA: ${s.meanPGA_g.toFixed(4)}g | Zones: ${s.zonesAnalyzed} | Faults: ${s.faultsAnalyzed}\n`;
+      gfmTerminal.textContent += `Annual Exceedance: 50gal=${(ex.PGA_50gal*100).toFixed(2)}% | 100gal=${(ex.PGA_100gal*100).toFixed(2)}% | 200gal=${(ex.PGA_200gal*100).toFixed(2)}%\n`;
+      gfmTerminal.scrollTop = gfmTerminal.scrollHeight;
+
       if (statusEl) {
-        statusEl.textContent = analysis.isSynthetic ? 'ANALYZED (SYNTHETIC DATA)' : 'ANALYZED (REAL CATALOG)';
+        statusEl.textContent = analysis.isSynthetic ? 'ANALYZED (SYNTHETIC DATA)' : 'ANALYZED (REAL CATALOG + MC-PSHA)';
         statusEl.style.color = analysis.isSynthetic ? 'var(--amber)' : 'var(--green)';
       }
     } catch (e) {
-      gfmTerminal.textContent = `Historical analysis error: ${e.message}\n`;
+      gfmTerminal.textContent += `Historical analysis error: ${e.message}\n`;
       console.error('[CISV] Historical analysis failed:', e);
     }
 
