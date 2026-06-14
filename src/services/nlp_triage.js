@@ -44,13 +44,14 @@ export class LocalNLPTriageEngine {
       const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout for local LLM
 
       const isDev = window.location.port === '5173';
-      const endpoint = isDev ? this.ollamaProxy : this.ollamaEndpoint;
+      const isProd = window.location.port === '3000';
+      const endpoint = isDev ? this.ollamaProxy : isProd ? '/ollama/api/chat' : this.ollamaEndpoint;
 
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'huihui_ai/gemma-4-abliterated:12b-q4_K',
+          model: 'tinyllama:1.1b',
           messages: [
             {
               role: 'system',

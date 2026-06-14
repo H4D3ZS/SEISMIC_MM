@@ -16,8 +16,10 @@ export class OllamaService {
    */
   async listModels(hostUrl) {
     // In dev mode, use the Vite proxy to bypass CORS
+    // In production, use the server proxy
     const isDev = window.location.port === '5173';
-    const proxyUrl = isDev ? '/ollama-proxy' : hostUrl;
+    const isProd = window.location.port === '3000';
+    const proxyUrl = isDev ? '/ollama-proxy' : isProd ? '/ollama' : hostUrl;
 
     try {
       const res = await fetch(`${proxyUrl}/api/tags`);
@@ -28,7 +30,7 @@ export class OllamaService {
       return (data.models ?? []).map(m => m.name);
     } catch (err) {
       // If proxy fails, try direct connection (requires OLLAMA_ORIGINS="*")
-      if (isDev) {
+      if (isDev || isProd) {
         const res = await fetch(`${hostUrl}/api/tags`);
         if (!res.ok) throw new Error(`Ollama connection status error: ${res.statusText}`);
         const data = await res.json();

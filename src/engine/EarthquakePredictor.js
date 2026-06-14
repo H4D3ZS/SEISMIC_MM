@@ -54,7 +54,7 @@ function mulberry32(seed) {
 export class EarthquakePredictor {
   constructor() {
     this.ollamaUrl = 'http://localhost:11434/api/chat';
-    this.activeModel = 'huihui_ai/gemma-4-abliterated:12b-q4_K';
+    this.activeModel = 'tinyllama:1.1b';
     this.rng = mulberry32(0xDEADBEEF);
     this.improver = new PredictionImprover();
     this.simulator = new MonteCarloSimulator({ numSimulations: 100_000 });
@@ -813,7 +813,12 @@ ${liveBlock}
 
 Answer with SPECIFIC DATES and timeframes. The question is WHEN. Be precise. Reference the validated June 8, 2026 prediction as proof of methodology.`;
 
-    const response = await fetch(this.ollamaUrl, {
+    // Use proxy in dev/production to bypass CORS
+    const isDev = typeof window !== 'undefined' && window.location?.port === '5173';
+    const isProd = typeof window !== 'undefined' && window.location?.port === '3000';
+    const ollamaUrl = isDev ? '/ollama/api/chat' : isProd ? '/ollama/api/chat' : this.ollamaUrl;
+
+    const response = await fetch(ollamaUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
