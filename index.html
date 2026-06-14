@@ -11,6 +11,72 @@
       0% { opacity: 0.2; transform: scale(0.9); }
       100% { opacity: 1.0; transform: scale(1.1); }
     }
+
+    /* ── Header search trigger ───────────────────────────────────────── */
+    #cmdk-trigger {
+      display: flex; align-items: center; gap: 8px; margin: 0 14px;
+      padding: 5px 10px; min-width: 230px; cursor: pointer;
+      background: rgba(0, 229, 255, 0.04); border: 1px solid rgba(0, 229, 255, 0.22);
+      border-radius: 5px; color: #8fb3c8; font-family: var(--font-mono, monospace);
+      font-size: 10px; transition: border-color .15s, background .15s, box-shadow .15s;
+    }
+    #cmdk-trigger:hover { border-color: rgba(0, 229, 255, 0.6); background: rgba(0, 229, 255, 0.08); box-shadow: 0 0 14px rgba(0,229,255,0.15); }
+    #cmdk-trigger .cmdk-trigger-ico { color: #00e5ff; font-size: 13px; }
+    #cmdk-trigger .cmdk-trigger-label { flex: 1; text-align: left; }
+    #cmdk-trigger .cmdk-trigger-kbd { font-size: 8px; padding: 2px 5px; border: 1px solid rgba(255,255,255,.15); border-radius: 3px; color: #9ab; letter-spacing: .5px; }
+
+    /* ── Command palette overlay ─────────────────────────────────────── */
+    #command-palette {
+      position: fixed; inset: 0; z-index: 9999;
+      display: flex; align-items: flex-start; justify-content: center;
+      padding-top: 12vh; background: rgba(2, 6, 10, 0.62); backdrop-filter: blur(4px);
+      animation: cmdk-fade .12s ease;
+    }
+    @keyframes cmdk-fade { from { opacity: 0; } to { opacity: 1; } }
+    .cmdk-box {
+      width: min(680px, 92vw); max-height: 64vh; display: flex; flex-direction: column;
+      background: linear-gradient(180deg, rgba(8,14,20,0.98), rgba(5,9,14,0.98));
+      border: 1px solid rgba(0,229,255,0.35); border-radius: 10px; overflow: hidden;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,229,255,0.06), inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+    .cmdk-input-row { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+    .cmdk-input-ico { color: #00e5ff; font-size: 18px; text-shadow: 0 0 10px rgba(0,229,255,.5); }
+    #cmdk-input { flex: 1; background: transparent; border: none; outline: none; color: #eaf6ff; font-family: var(--font-mono, monospace); font-size: 15px; letter-spacing: .3px; }
+    #cmdk-input::placeholder { color: #5b7585; }
+    .cmdk-hint { font-size: 8.5px; color: #5b7585; font-family: var(--font-mono, monospace); white-space: nowrap; }
+    #cmdk-results { overflow-y: auto; padding: 6px; }
+    .cmdk-item { display: flex; align-items: center; gap: 11px; padding: 9px 11px; border-radius: 6px; cursor: pointer; border: 1px solid transparent; }
+    .cmdk-item.active { background: rgba(0,229,255,0.10); border-color: rgba(0,229,255,0.35); box-shadow: inset 0 0 0 1px rgba(0,229,255,0.08); }
+    .cmdk-ico { width: 16px; text-align: center; font-size: 13px; }
+    .cmdk-main { flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+    .cmdk-name { color: #eaf6ff; font-family: var(--font-mono, monospace); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cmdk-sub { color: #6f8a9a; font-family: var(--font-mono, monospace); font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cmdk-coord { color: #5b7585; font-family: var(--font-mono, monospace); font-size: 9px; white-space: nowrap; }
+
+    /* ── Hazard readout HUD ──────────────────────────────────────────── */
+    #hazard-readout {
+      position: absolute; top: 64px; right: 18px; width: 300px; z-index: 50;
+      background: rgba(5, 10, 15, 0.92); backdrop-filter: blur(10px);
+      border: 1px solid rgba(0,229,255,0.30); border-left: 3px solid #00e5ff; border-radius: 0 6px 6px 0;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.6); font-family: var(--font-mono, monospace); color: #cfe7f2;
+      animation: cmdk-fade .15s ease;
+    }
+    #hazard-readout .hz-head { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+    #hazard-readout .hz-title { color: #00e5ff; font-size: 12px; font-weight: bold; letter-spacing: .4px; text-shadow: 0 0 8px rgba(0,229,255,.35); }
+    #hz-close { background: none; border: none; color: #6f8a9a; cursor: pointer; font-size: 12px; }
+    #hz-close:hover { color: #fff; }
+    #hazard-readout .hz-body { padding: 10px 12px; font-size: 10px; line-height: 1.55; white-space: pre-wrap; max-height: 50vh; overflow-y: auto; }
+    .hz-chip { display: inline-block; padding: 1px 7px; border-radius: 3px; font-size: 9px; font-weight: bold; }
+    .hz-vhigh { background: rgba(168,0,255,.18); color: #d59bff; border: 1px solid rgba(168,0,255,.5); }
+    .hz-high  { background: rgba(255,26,68,.16); color: #ff8aa0; border: 1px solid rgba(255,26,68,.5); }
+    .hz-mod   { background: rgba(255,170,0,.16); color: #ffcf7a; border: 1px solid rgba(255,170,0,.5); }
+    .hz-low   { background: rgba(0,255,136,.14); color: #8affc1; border: 1px solid rgba(0,255,136,.45); }
+
+    /* ── Boot log (loading overlay) ──────────────────────────────────── */
+    #boot-log { margin-top: 10px; width: min(460px, 80vw); text-align: left; font-family: var(--font-mono, monospace);
+      font-size: 9.5px; line-height: 1.5; color: #6fd3c4; max-height: 150px; overflow: hidden; }
+    #boot-log .boot-ok { color: #00ff9c; }
+    #boot-log .boot-pending { color: #ffcf7a; }
   </style>
 </head>
 <body>
@@ -39,6 +105,9 @@
     <div style="position: absolute; top: 50%; left: 260px; width: 8px; height: 1px; background: rgba(0,200,255,0.12);"></div>
     <div style="position: absolute; top: 50%; right: 260px; width: 8px; height: 1px; background: rgba(0,200,255,0.12);"></div>
   </div>
+
+  <!-- Earthquake Alert Popup System -->
+  <div id="alert-container" style="position: fixed; top: 56px; left: 50%; transform: translateX(-50%); z-index: 200; display: flex; flex-direction: column; gap: 8px; pointer-events: none; max-width: 500px; width: 90%;"></div>
 
   <!-- ══════════════════════════════════════════════════════════════
        TOP HUD BAR
@@ -78,8 +147,40 @@
       </div>
     </div>
 
+    <button id="cmdk-trigger" type="button" aria-label="Search (Ctrl+K)" title="Search places, barangays, faults, zones, events  (Ctrl+K)">
+      <span class="cmdk-trigger-ico" aria-hidden="true">⌕</span>
+      <span class="cmdk-trigger-label">Search the archipelago…</span>
+      <span class="cmdk-trigger-kbd" aria-hidden="true">Ctrl K</span>
+    </button>
+
     <div class="hud-clock" id="utc-clock" aria-label="Current UTC time" aria-live="polite"></div>
   </header>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       COMMAND PALETTE (Ctrl+K)
+  ══════════════════════════════════════════════════════════════ -->
+  <div id="command-palette" role="dialog" aria-label="Command palette" style="display:none;">
+    <div class="cmdk-box">
+      <div class="cmdk-input-row">
+        <span class="cmdk-input-ico" aria-hidden="true">⌕</span>
+        <input id="cmdk-input" type="text" autocomplete="off" spellcheck="false"
+               placeholder="Search places, barangays, faults, seismogenic zones, live events…" />
+        <span class="cmdk-hint">↑↓ navigate · ↵ go · Esc close</span>
+      </div>
+      <div id="cmdk-results" role="listbox" aria-label="Search results"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       HAZARD READOUT HUD (populated on search/select)
+  ══════════════════════════════════════════════════════════════ -->
+  <div id="hazard-readout" role="region" aria-label="Hazard readout" style="display:none;">
+    <div class="hz-head">
+      <span class="hz-title" id="hz-title">—</span>
+      <button id="hz-close" type="button" aria-label="Close readout">✕</button>
+    </div>
+    <div class="hz-body" id="hz-body"></div>
+  </div>
 
   <!-- ══════════════════════════════════════════════════════════════
        LEFT PANEL — LAYER & FILTER CONTROLS
@@ -372,9 +473,9 @@
         </div>
 
         <label class="layer-toggle" for="ollama-mock-mode" style="margin: 2px 0; display: flex; align-items: center; gap: 6px; cursor: pointer;">
-          <input type="checkbox" id="ollama-mock-mode" checked />
+          <input type="checkbox" id="ollama-mock-mode" />
           <span class="toggle-track" aria-hidden="true"></span>
-          <span class="toggle-label" style="font-size: 9px;">Simulation / Mock Generation</span>
+          <span class="toggle-label" style="font-size: 9px;">Mock fallback only (OFF = real Ollama)</span>
         </label>
 
         <button id="ollama-analyze-btn" class="nlp-btn" style="background: rgba(0, 255, 200, 0.15); border-color: #00ffcc; color: #00ffcc; width: 100%; font-family: var(--font-mono); font-size: 9px; padding: 6px; border: 1px solid #00ffcc; border-radius: 3px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(0, 255, 200, 0.3)'; this.style.color='#ffffff';" onmouseout="this.style.background='rgba(0, 255, 200, 0.15)'; this.style.color='#00ffcc';">
@@ -873,6 +974,7 @@
       <div class="loader-bar-wrap" aria-hidden="true">
         <div class="loader-bar" id="loader-bar"></div>
       </div>
+      <div id="boot-log" aria-hidden="true"></div>
       <p class="loader-attribution">
         Data: <a href="https://earthquake.phivolcs.dost.gov.ph/" target="_blank" rel="noopener">PHIVOLCS</a>
         · <a href="https://earthquake.usgs.gov/fdsnws/event/1/" target="_blank" rel="noopener">USGS FDSNWS</a>
