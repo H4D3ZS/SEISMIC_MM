@@ -1,0 +1,56 @@
+{
+  "id": "cascade-1781555610322",
+  "objective": "Agent mission",
+  "status": "running",
+  "started_at": 1781555684530,
+  "finished_at": null,
+  "steps": [
+    {
+      "id": "step-1781555684530-puqljc",
+      "kind": "phase",
+      "title": "User turn",
+      "detail": "capabiliites?",
+      "tool": null,
+      "timestamp": 1781555684530,
+      "success": null,
+      "subagent_id": null,
+      "media_path": null
+    },
+    {
+      "id": "step-1781555767284-0u6kcm",
+      "kind": "phase",
+      "title": "User turn",
+      "detail": "fable 5?",
+      "tool": null,
+      "timestamp": 1781555767284,
+      "success": null,
+      "subagent_id": null,
+      "media_path": null
+    },
+    {
+      "id": "step-1781555820329-um58p5",
+      "kind": "phase",
+      "title": "User turn",
+      "detail": "claude code fable 5?",
+      "tool": null,
+      "timestamp": 1781555820329,
+      "success": null,
+      "subagent_id": null,
+      "media_path": null
+    },
+    {
+      "id": "step-1781555830322-f3aosc",
+      "kind": "phase",
+      "title": "User turn",
+      "detail": "claude code fable 5?",
+      "tool": null,
+      "timestamp": 1781555830322,
+      "success": null,
+      "subagent_id": null,
+      "media_path": null
+    }
+  ],
+  "subagents": [],
+  "artifact_paths": [],
+  "summary": null
+}

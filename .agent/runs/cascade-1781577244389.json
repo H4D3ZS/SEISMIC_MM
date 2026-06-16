@@ -1,0 +1,23 @@
+{
+  "id": "cascade-1781577244389",
+  "objective": "Agent mission",
+  "status": "running",
+  "started_at": 1781577341545,
+  "finished_at": null,
+  "steps": [
+    {
+      "id": "step-1781577341545-vx0y0i",
+      "kind": "phase",
+      "title": "User turn",
+      "detail": "crawl https://tech-hub2026.vercel.app/",
+      "tool": null,
+      "timestamp": 1781577341545,
+      "success": null,
+      "subagent_id": null,
+      "media_path": null
+    }
+  ],
+  "subagents": [],
+  "artifact_paths": [],
+  "summary": null
+}

@@ -1,0 +1,23 @@
+{
+  "id": "cascade-1781573198950",
+  "objective": "crawl https://tech-hub2026.vercel.app/",
+  "status": "completed",
+  "started_at": 1781574134065,
+  "finished_at": 1781574135065,
+  "steps": [
+    {
+      "id": "step-1781574135070-z1wir9",
+      "kind": "tool_result",
+      "title": "✓ Mission complete",
+      "detail": "Agent finished — review reports/ exploits/ recon/ for deliverables",
+      "tool": "mission",
+      "timestamp": 1781574135070,
+      "success": true,
+      "subagent_id": null,
+      "media_path": null
+    }
+  ],
+  "subagents": [],
+  "artifact_paths": [],
+  "summary": "Mission complete"
+}

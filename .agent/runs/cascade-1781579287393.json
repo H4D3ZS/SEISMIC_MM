@@ -1,0 +1,34 @@
+{
+  "id": "cascade-1781579287393",
+  "objective": "crawl https://tech-hub2026.vercel.app/sitemap.xml",
+  "status": "completed",
+  "started_at": 1781580031890,
+  "finished_at": 1781580032890,
+  "steps": [
+    {
+      "id": "step-1781580032904-5i8eah",
+      "kind": "tool_result",
+      "title": "✓ Mission complete",
+      "detail": "Agent finished — review reports/ exploits/ recon/ for deliverables",
+      "tool": "mission",
+      "timestamp": 1781580032904,
+      "success": true,
+      "subagent_id": null,
+      "media_path": null
+    },
+    {
+      "id": "step-1781581343331-fzo4yb",
+      "kind": "phase",
+      "title": "User turn",
+      "detail": "crawl https://tech-hub2026.vercel.app/sitemap.xml",
+      "tool": null,
+      "timestamp": 1781581343331,
+      "success": null,
+      "subagent_id": null,
+      "media_path": null
+    }
+  ],
+  "subagents": [],
+  "artifact_paths": [],
+  "summary": "Mission complete"
+}

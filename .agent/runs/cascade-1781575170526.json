@@ -1,0 +1,56 @@
+{
+  "id": "cascade-1781575170526",
+  "objective": "Agent mission",
+  "status": "running",
+  "started_at": 1781575644972,
+  "finished_at": null,
+  "steps": [
+    {
+      "id": "step-1781575644972-fb5viz",
+      "kind": "tool_call",
+      "title": "glob",
+      "detail": "{\"pattern\":\"**/*.rs\"}",
+      "tool": "glob",
+      "timestamp": 1781575644972,
+      "success": null,
+      "subagent_id": null,
+      "media_path": null
+    },
+    {
+      "id": "step-1781575644973-adaw02",
+      "kind": "tool_call",
+      "title": "glob",
+      "detail": "{\"pattern\":\"**/*.rs\"}",
+      "tool": "glob",
+      "timestamp": 1781575644973,
+      "success": null,
+      "subagent_id": null,
+      "media_path": null
+    },
+    {
+      "id": "step-1781575645108-w4avk1",
+      "kind": "tool_result",
+      "title": "✓ glob",
+      "detail": "[\"\\\\\\\\?\\\\C:\\\\Users\\\\HADES\\\\Desktop\\\\seismologicalgraph\\\\node_modules\\\\@tauri-apps\\\\cli\\\\build.rs\",\"\\\\\\\\?\\\\C:\\\\Users\\\\HADES\\\\Desktop\\\\seismologicalgraph\\\\node_modules\\\\@tauri-apps\\\\cli\\\\src\\\\lib.rs\",\"\\\\\\\\?\\\\C:\\\\Users\\\\HADES\\\\Desktop\\\\seismologicalgraph\\\\src-tauri\\\\build.rs\",\"\\\\\\\\?\\\\C:\\\\Users\\\\HADES\\\\Desktop\\\\seismologicalgraph\\\\src-tauri\\\\src\\\\main.rs\",\"\\\\\\\\?\\\\C:\\\\Users\\\\HADES\\\\Desktop\\\\seismologicalgraph\\\\src-tauri\\\\target\\\\debug\\\\build\\\\cssparser-18fb610ab15ca1b6\\\\out\\\\tokenizer.rs\",\"\\\\\\\\?\\\\C:\\\\Users\\\\HADES\\\\Desktop\\\\seismologicalgraph\\\\src-tauri\\\\target\\\\debug\\\\build\\\\html5ever-c4528b17e3c73a06\\\\out\\\\rules.rs\",\"\\\\\\\\?\\\\C:\\\\Users\\\\HADES\\\\Desktop\\\\seismologicalgraph\\\\src-tauri\\\\target\\\\debug\\\\build\\\\markup5ever-6c93dac0d2207a55\\\\out\\\\generated.rs\",\"\\\\\\\\?\\\\C:\\\\Users\\\\HADES\\\\Desktop\\\\seismolo",
+      "tool": "glob",
+      "timestamp": 1781575645108,
+      "success": true,
+      "subagent_id": null,
+      "media_path": null
+    },
+    {
+      "id": "step-1781575645109-unopuj",
+      "kind": "tool_result",
+      "title": "✓ glob",
+      "detail": "[\"\\\\\\\\?\\\\C:\\\\Users\\\\HADES\\\\Desktop\\\\seismologicalgraph\\\\node_modules\\\\@tauri-apps\\\\cli\\\\build.rs\",\"\\\\\\\\?\\\\C:\\\\Users\\\\HADES\\\\Desktop\\\\seismologicalgraph\\\\node_modules\\\\@tauri-apps\\\\cli\\\\src\\\\lib.rs\",\"\\\\\\\\?\\\\C:\\\\Users\\\\HADES\\\\Desktop\\\\seismologicalgraph\\\\src-tauri\\\\build.rs\",\"\\\\\\\\?\\\\C:\\\\Users\\\\HADES\\\\Desktop\\\\seismologicalgraph\\\\src-tauri\\\\src\\\\main.rs\",\"\\\\\\\\?\\\\C:\\\\Users\\\\HADES\\\\Desktop\\\\seismologicalgraph\\\\src-tauri\\\\target\\\\debug\\\\build\\\\cssparser-18fb610ab15ca1b6\\\\out\\\\tokenizer.rs\",\"\\\\\\\\?\\\\C:\\\\Users\\\\HADES\\\\Desktop\\\\seismologicalgraph\\\\src-tauri\\\\target\\\\debug\\\\build\\\\html5ever-c4528b17e3c73a06\\\\out\\\\rules.rs\",\"\\\\\\\\?\\\\C:\\\\Users\\\\HADES\\\\Desktop\\\\seismologicalgraph\\\\src-tauri\\\\target\\\\debug\\\\build\\\\markup5ever-6c93dac0d2207a55\\\\out\\\\generated.rs\",\"\\\\\\\\?\\\\C:\\\\Users\\\\HADES\\\\Desktop\\\\seismolo",
+      "tool": "glob",
+      "timestamp": 1781575645109,
+      "success": true,
+      "subagent_id": null,
+      "media_path": null
+    }
+  ],
+  "subagents": [],
+  "artifact_paths": [],
+  "summary": null
+}
